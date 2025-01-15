@@ -1,12 +1,15 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFonts } from 'expo-font';
-import { Link, router, Stack, useRouter } from 'expo-router';
+import { Link, Redirect, router, Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 import Colors from '@/constants/Colors';
 import { TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { ClerkProvider, ClerkLoaded, useAuth } from '@clerk/clerk-expo';
+import { Slot } from 'expo-router';
+import { tokenCache } from '@/cache';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -16,7 +19,18 @@ export {
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
+
+const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
+
+if (!publishableKey) {
+  throw new Error(
+    'Missing Publishable Key. Please set EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY in your .env',
+  )
+}
+
 const InitialLayout = () => {
+  
+  
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     ...FontAwesome.font,
@@ -89,7 +103,11 @@ const InitialLayout = () => {
 
 const RootLayoutNav = () => {
   return (
-     <InitialLayout/>
+    <ClerkProvider publishableKey ={publishableKey} tokenCache={tokenCache}>
+       <ClerkLoaded>
+         <InitialLayout/>
+       </ClerkLoaded>
+    </ClerkProvider>
   );
 }
 
