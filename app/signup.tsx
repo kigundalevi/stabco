@@ -1,15 +1,22 @@
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native'
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native'
 import React, { useState } from 'react'
 import { defaultStyles } from '@/constants/styles'
 import Colors from '@/constants/Colors';
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
 const signup = () => { 
     const [countryCode, setCountryCode]=useState('+254');
     const [phoneNumber, setphoneNumber]=useState('');
     const keyboardVerticalOffset = Platform.OS === 'ios' ? 40 : 0;
 
-    const onSignup = async() =>{}
+    const onSignup = async() =>{
+      if(phoneNumber !== ''){
+        router.push('./verify/[phone]');
+      }else{
+        alert('Please enter your phone number');
+    }
+  }
 
   return (
     <KeyboardAvoidingView style={{flex:1}} behavior='padding' keyboardVerticalOffset={keyboardVerticalOffset}>
@@ -37,7 +44,8 @@ const signup = () => {
           <TouchableOpacity>
             <Text style={defaultStyles.textLink}>Already have an account? Login</Text>
           </TouchableOpacity>
-          </Link>
+          </Link>  
+          
              
              <View style={{flex:1}}/>
 
