@@ -1,49 +1,98 @@
-import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
-import React from 'react';
-import { Link } from 'expo-router';
-import { defaultStyles } from '@/constants/styles';
-import Colors from '@/constants/Colors';
+import { View, Text, Image, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
+import React, { useEffect } from 'react';
+import { Link, router } from 'expo-router';
+import Onboarding from 'react-native-onboarding-swiper';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const Page = () => {
+const { width, height } = Dimensions.get('window');
+
+const index = () => {
+  useEffect(() => {
+    checkIfAlreadyOnboarded();
+  }, []);
+
+  const checkIfAlreadyOnboarded = async () => {
+    try {
+      const value = await AsyncStorage.getItem('hasOnboarded');
+      
+      if (value !== null && value === 'true') {
+        // User has already onboarded, redirect to signup
+        router.push('/signup');
+      }
+    } catch (error) {
+      console.log('Error checking onboarding status:', error);
+    }
+  };
+
+  const handleDone = async () => {
+    try {
+      // Set the flag indicating user has completed onboarding
+      await AsyncStorage.setItem('hasOnboarded', 'true');
+      router.push('/signup');
+    } catch (error) {
+      console.log('Error saving onboarding status:', error);
+    }
+  };
+
+  const handleSkip = async () => {
+    try {
+      // Even if user skips, we still mark them as onboarded
+      await AsyncStorage.setItem('hasOnboarded', 'true');
+      router.push('/signup');
+    } catch (error) {
+      console.log('Error saving onboarding status:', error);
+    }
+  };
+
   return (
     <View style={styles.container}>
-      {/* <Image source={require('@/assets/images/back.jpg')} style={styles.backgroundImg} /> */}
-      <View style={styles.overlay}>
-        <Text style={styles.text}>A new age of money transfer</Text>
-      </View>
-        <View style={styles.buttons}>
-          <Link href={'/login'}
-          style={[
-            defaultStyles.pillButton,
-            {
-            flex:1,
-            backgroundColor:'black',
-            marginBottom:20,
-            padding:20
-          }
-          ]} 
-          asChild>
-            <TouchableOpacity>
-              <Text style={{color:'white'}}>Log in </Text>
-            </TouchableOpacity>
-          </Link>
-          <Link href={'/signup'}
-          style={[
-            defaultStyles.pillButton,
-            {
-            flex:1,
-            backgroundColor:'black',
-            marginBottom:20,
-            padding:20
-          }
-          ]} 
-          asChild>
-            <TouchableOpacity>
-              <Text style={{color:'white'}}>signup</Text>
-            </TouchableOpacity>
-          </Link>
-        </View>
-
+      <Onboarding
+        containerStyles={{ paddingHorizontal: 15 }}
+        bottomBarHighlight={false}
+        onDone={handleDone}
+        onSkip={handleSkip}
+        pages={[
+          {
+            backgroundColor: 'whitesmoke',
+            image: (
+              <View>
+                <Image
+                  style={styles.lottie}
+                  source={require('../assets/images/rb_68859.png')}
+                />
+              </View>
+            ),
+            title: 'Instant',
+            subtitle: 'Send and revieve money instantly with zero fees',
+          },
+          {
+            backgroundColor: '#C5C8FF',
+            image: (
+              <View>
+                <Image
+                  style={styles.lottie}
+                  source={require('../assets/images/rb_79797.png')}
+                />
+              </View>
+            ),
+            title: 'Secure',
+            subtitle: 'secure your accouunt with a personalized pin and wallet system',
+          },
+          {
+            backgroundColor: '#385A64',
+            image: (
+              <View>
+                <Image
+                  style={styles.lottie}
+                  source={require('../assets/images/rb_7464.png')}
+                />
+              </View>
+            ),
+            title: 'Realtime',
+            subtitle: 'Manage your money with real time tracking and analytics',
+          },
+        ]}
+      />
     </View>
   );
 };
@@ -51,29 +100,19 @@ const Page = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor:'white',
   },
-  backgroundImg: {
-    width: '100%',
-    height: '100%',
-    position: 'absolute',
+  lottie: {
+    width: width * 0.9,
+    resizeMode: 'contain',
+    height: width,
   },
-  overlay: {
-    flex: 1,
-    justifyContent: 'center', // Center content vertically
-    alignItems:'center' // Center content horizontally
+  donebtn: {
+    color: 'white',
+    padding: 20,
+    backgroundColor: 'white',
+    borderTopLeftRadius: '100%',
+    borderBottomLeftRadius: '100%',
   },
-  text: {
-    fontSize: 24,
-    color: 'black', // White text color to contrast with the background
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  buttons:{
-    flexDirection:'row',
-    justifyContent:'center',
-    gap:20,
-  }
 });
 
-export default Page;
+export default index;

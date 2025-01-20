@@ -1,84 +1,192 @@
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native'
-import React, { useState } from 'react'
-import { defaultStyles } from '@/constants/styles'
-import Colors from '@/constants/Colors';
-import { Link, router } from 'expo-router';
+// app/index.js
+import { View, Text, TouchableOpacity, StyleSheet} from 'react-native';
+import { Link } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import * as WebBrowser from "expo-web-browser";
+import React from 'react';
+import { useOAuth } from '@clerk/clerk-expo';
+import * as Linking from 'expo-linking';
+ 
 
-const signup = () => { 
-    const [countryCode, setCountryCode]=useState('+254');
-    const [phoneNumber, setphoneNumber]=useState('');
-    const keyboardVerticalOffset = Platform.OS === 'ios' ? 40 : 0;
+export const useWarmUpBrowser = () => {
+  useEffect(() => {
+    // Warm up the android browser to improve UX
+    // https://docs.expo.dev/guides/authentication/#improving-user-experience
+    void WebBrowser.warmUpAsync();
+    return () => {
+      void WebBrowser.coolDownAsync();
+    };
+  }, []);
+};
 
-    const onSignup = async() =>{
-      if(phoneNumber !== ''){
-        router.push('./verify/[phone]');
-      }else{
-        alert('Please enter your phone number');
+WebBrowser.maybeCompleteAuthSession();
+
+
+export default function LoginScreen() {
+  const [loading, setLoading] = useState(false);
+
+
+useWarmUpBrowser()
+
+const { startOAuthFlow } = useOAuth({ strategy: 'oauth_google' })
+
+const google = React.useCallback(async () => {
+  try {
+    const { createdSessionId, signIn, signUp, setActive } = await startOAuthFlow({
+      redirectUrl: Linking.createURL('/dashboard', { scheme: 'myapp' }),
+    })
+
+    // If sign in was successful, set the active session
+    if (createdSessionId) {
+      setActive!({ session: createdSessionId })
+    } else {
+      // Use signIn or signUp returned from startOAuthFlow
+      // for next steps, such as MFA
     }
+  } catch (err) {
+    // See https://clerk.com/docs/custom-flows/error-handling
+    // for more info on error handling
+    console.error(JSON.stringify(err, null, 2))
   }
+}, [])
 
   return (
-    <KeyboardAvoidingView style={{flex:1}} behavior='padding' keyboardVerticalOffset={keyboardVerticalOffset}>
-
-    <View style={defaultStyles.container}>
-      
-      <Text style={defaultStyles.header}>Lets get started</Text>
-      <Text style={defaultStyles.descriptionText}>Enter your phone number. We will send you a confirmation code there</Text>
-      <View style={styles.inputContainer}>
-      <TextInput
-           style={styles.input}
-           placeholder='country code'
-           placeholderTextColor={Colors.gray}
-           value={countryCode}
-           keyboardType='numeric'/>
-        <TextInput
-           style={[styles.input,{ flex:1 }]}
-           placeholder='Mobile number'
-           keyboardType='numeric'
-           value={phoneNumber}
-           onChangeText={setphoneNumber}
-           />
+    <View style={styles.container}>
+      {/* Logo Circle */}
+      <View style={styles.logoContainer}>
+        <View style={styles.logoCircle}>
+          <View style={styles.innerCircle} />
+        </View>
       </View>
-          <Link href={'/login'} replace asChild>
-          <TouchableOpacity>
-            <Text style={defaultStyles.textLink}>Already have an account? Login</Text>
-          </TouchableOpacity>
-          </Link>  
-          
-             
-             <View style={{flex:1}}/>
 
-          <TouchableOpacity
-             style={[defaultStyles.pillButton,
-                phoneNumber !== '' ? styles.enabled : styles.disabled,
-                { marginBottom: 20 },
-            ]}
-             onPress={onSignup}>
-                 <Text style={defaultStyles.buttonText}>Sign up</Text>
-             </TouchableOpacity>
+      {/* Title Text */}
+      <Text style={styles.titleText}>FAST </Text>
+      <Text style={styles.titleText}>FREE</Text>
+      <Text style={styles.titleText}>SECURE</Text>
+
+      {/* Google Sign In Button */}
+      <TouchableOpacity
+        style={styles.googleButton}
+        onPress={google}
+        disabled={loading}
+      >
+        <Ionicons name="logo-google" size={24} color="white" style={styles.googleIcon} />
+        <Text style={styles.googleButtonText}>Continue with Google</Text>
+      </TouchableOpacity>
+
+      {/* Other Options Button */}
+      <TouchableOpacity style={styles.otherOptionsButton}>
+        <Text style={styles.otherOptionsText}>Other options</Text>
+      </TouchableOpacity>
+
+      {/* Privacy Policy and Terms */}
+      <View style={styles.policyContainer}>
+        <Text style={styles.policyText}>Read our </Text>
+        <Link href="/privacy" style={styles.linkText}>
+          Privacy Policy
+        </Link>
+        <Text style={styles.policyText}> & </Text>
+        <Link href="/biometric-privacy" style={styles.linkText}>
+          Biometric Privacy Notice
+        </Link>
+      </View>
+      <View style={styles.termsContainer}>
+        <Text style={styles.policyText}>Continue to accept the </Text>
+        <Link href="/terms" style={styles.linkText}>
+          Terms of service
+        </Link>
+        <Text style={styles.policyText}>.</Text>
+      </View>
     </View>
-    </KeyboardAvoidingView>
   );
-  };
-       const styles = StyleSheet.create({
-        inputContainer:{
-            marginVertical:40,
-            flexDirection:'row',
-        },
-        input:{ 
-           backgroundColor:'white',
-           padding:20,
-           borderRadius:16,
-           fontSize:20,
-           marginRight:10,
-        },
-        enabled:{
-            backgroundColor:'black',
-        },
-        disabled:{
-            backgroundColor:'gray',
-        }
-       });
+}
 
-export default signup;
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#000000',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    padding: 20,
+  },
+  logoContainer: {
+    marginBottom: 30,
+  },
+  logoCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#4169E1',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  innerCircle: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#000000',
+    position: 'absolute',
+    right: 5,
+  },
+  titleText: {
+    color: '#FFFFFF',
+    fontSize: 32,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginVertical: 5,
+  },
+  googleButton: {
+    flexDirection: 'row',
+    backgroundColor: '#4169E1',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 40,
+    width: '100%',
+    maxWidth: 300,
+  },
+  googleIcon: {
+    marginRight: 10,
+  },
+  googleButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  otherOptionsButton: {
+    marginTop: 15,
+    padding: 12,
+    width: '100%',
+    maxWidth: 300,
+    alignItems: 'center',
+  },
+  otherOptionsText: {
+    color: '#4169E1',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  policyContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    marginTop: 40,
+  },
+  termsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    marginTop: 5,
+  },
+  policyText: {
+    color: '#808080',
+    fontSize: 14,
+  },
+  linkText: {
+    color: '#4169E1',
+    fontSize: 14,
+    textDecorationLine: 'underline',
+  },
+});

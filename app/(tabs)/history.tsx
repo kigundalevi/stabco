@@ -1,12 +1,12 @@
 import { View, Text } from 'react-native'
 import React from 'react'
 
-const Phone = () => {
+const history = () => {
   return (
     <View>
-      <Text>Phone</Text>
+      <Text>history</Text>
     </View>
   )
 }
 
-export default Phone;
+export default history;
