@@ -1,13 +1,39 @@
-import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, Platform, StatusBar } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, Platform, StatusBar, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth, useUser } from '@clerk/clerk-expo';
-import { useState, useEffect, JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal } from 'react';
+import React, { useState, useEffect, JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal, useRef } from 'react';
 import { Feather, Ionicons } from '@expo/vector-icons';
+import Pay from '../components/Pay';
 
 export default function WalletScreen() {
   const router = useRouter();
   const { user } = useUser();
-  const [groupedTransactions, setGroupedTransactions] = useState({});
+  const [groupedTransactions, setGroupedTransactions] = useState<{ [key: string]: typeof sampleTransactions }>([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [activeModal, setActiveModal] = useState<'pay' | 'add' | 'withdraw' | null>(null);
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const [balance, setBalance] = useState(5000); // Initial balance in KES
+
+  const showModal = (type: 'pay' | 'add' | 'withdraw') => {
+    setActiveModal(type);
+    setModalVisible(true);
+    Animated.timing(slideAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const hideModal = () => {
+    Animated.timing(slideAnim, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      setModalVisible(false);
+      setActiveModal(null);
+    });
+  };
 
   // Sample transaction data
   const sampleTransactions = [
@@ -19,14 +45,14 @@ export default function WalletScreen() {
       type: 'debit'
     },
     {
-      id: 1,
+      id: 2,
       date: '2025-01-21',
       name: 'Elvis karani',
       amount: 'US$100',
       type: 'credit'
     },
        {
-      id: 2,
+      id: 3,
       date: '2024-11-01',
       name: 'Bank Of Am',
       amount: 'KES10,000.00',
@@ -34,8 +60,32 @@ export default function WalletScreen() {
       status: 'Failed'
     },
     {
-      id: 3,
+      id: 4,
       date: '2024-11-01',
+      name: 'Shazam, Inc.',
+      amount: 'KES10,000.00',
+      type: 'credit',
+      status: 'Failed'
+    },
+    {
+      id: 5,
+      date: '2024-10-01',
+      name: 'Shazam, Inc.',
+      amount: 'KES10,000.00',
+      type: 'credit',
+      status: 'Failed'
+    },
+    {
+      id: 6,
+      date: '2024-10-01',
+      name: 'Shazam, Inc.',
+      amount: 'KES10,000.00',
+      type: 'credit',
+      status: 'Failed'
+    },
+    {
+      id: 7,
+      date: '2024-10-01',
       name: 'Shazam, Inc.',
       amount: 'KES10,000.00',
       type: 'credit',
@@ -61,23 +111,23 @@ export default function WalletScreen() {
       });
     };
 
-    const grouped = sampleTransactions.reduce((groups, transaction) => {
+    const grouped = sampleTransactions.reduce((groups: { [key: string]: typeof sampleTransactions }, transaction) => {
       const dateKey = formatDate(transaction.date);
       if (!groups[dateKey]) {
         groups[dateKey] = [];
       }
       groups[dateKey].push(transaction);
       return groups;
-    }, {});
+    }, {} as { [key: string]: typeof sampleTransactions });
 
     const sortedGroups = Object.keys(grouped)
       .sort((a, b) => {
         if (a === 'Today') return -1;
         if (b === 'Today') return 1;
         return new Date(b.replace('Today', new Date().toISOString())) - 
-               new Date(a.replace('Today', new Date().toISOString()));
+               new Date(a === 'Today' ? new Date().toISOString() : a);
       })
-      .reduce((obj, key) => {
+      .reduce((obj: { [key: string]: typeof sampleTransactions }, key) => {
         obj[key] = grouped[key];
         return obj;
       }, {});
@@ -91,8 +141,7 @@ export default function WalletScreen() {
       <View style={styles.header}>
         <View style={styles.profileSection}>
           <TouchableOpacity 
-            style={styles.profileImageContainer}
-            onPress={() => router.push('/profile')}
+                       onPress={() => router.push('/profile')}
           >
             {user?.imageUrl ? (
               <Image 
@@ -127,11 +176,17 @@ export default function WalletScreen() {
 
       {/* Action Buttons */}
       <View style={styles.actionButtons}>
-        <TouchableOpacity style={styles.actionButton}>
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={() => showModal('add')}
+        >
           <Ionicons name="add-circle-outline" size={24} color="white" />
           <Text style={styles.actionButtonText}>Add Money</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton}>
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={() => showModal('withdraw')}
+        >
           <Ionicons name="remove-circle-outline" size={24} color="white" />
           <Text style={styles.actionButtonText}>Withdraw</Text>
         </TouchableOpacity>
@@ -146,11 +201,10 @@ export default function WalletScreen() {
           <View key={date} style={styles.dateGroup}>
             <Text style={styles.dateHeader}>{date}</Text>
             {(transactions as any[]).map((transaction: { id: Key | null | undefined; name: string | number | boolean | ReactElement<any, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined; status: string | number | boolean | ReactElement<any, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | null | undefined; type: string; amount: string | number | boolean | ReactElement<any, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | null | undefined; }) => (
-              <TouchableOpacity 
-                key={transaction.id} 
-                style={styles.transaction}
-                onPress={() => router.push(`/transaction/${transaction.id}`)}
-              >
+              <TouchableOpacity  
+                           key={transaction.id} 
+                style={styles.transaction} disabled={true}  
+                 >
                 <View style={styles.transactionLeft}>
                   {(transaction.name ?? '').includes('Bank') || (transaction.name ?? '').includes('Shazam') ? (
                     <View style={styles.bankIcon}>
@@ -184,25 +238,75 @@ export default function WalletScreen() {
         <View style={styles.bottomPadding} />
       </ScrollView>
 
-      {/* Pay Anyone Button */}
       <View style={styles.payButtonContainer}>
         <TouchableOpacity 
           style={styles.payButton}
-          onPress={() => router.push('/pay')}
+          onPress={() => showModal('pay')}
         >
           <Text style={styles.payButtonText}>Pay anyone</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Modal Container */}
+      {modalVisible && (
+        <Animated.View
+          style={[
+            styles.modalContainer,
+            {
+              transform: [
+                {
+                  translateY: slideAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [600, 0],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          {activeModal === 'pay' && (
+            <Pay 
+              onClose={hideModal} 
+              balance={balance}
+              onSuccess={(amount: number) => {
+                setBalance(prev => prev - amount);
+                // Update transactions here if needed
+                hideModal();
+              }}
+            />
+          )}
+          {activeModal === 'add' && (
+            <AddMoney 
+              onClose={hideModal}
+              onSuccess={(amount: number) => {
+                setBalance(prev => prev + amount);
+                hideModal();
+              }}
+            />
+          )}
+          {activeModal === 'withdraw' && (
+            <Withdraw 
+              onClose={hideModal}
+              balance={balance}
+              onSuccess={(amount: number) => {
+                setBalance(prev => prev - amount);
+                hideModal();
+              }}
+            />
+          )}
+        </Animated.View>
+      )}
     </View>
   );
 }
+ 
+
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'black',
-    paddingTop: Platform.OS === 'ios' ? 50 : StatusBar.currentHeight + 10,
-  },
+      },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -217,12 +321,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  profileImageContainer: {
-    position: 'relative',
-    width: 40,
-    height: 40,
-  },
-  profileImage: {
+   profileImage: {
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -281,13 +380,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     gap: 12,
     marginBottom: 20,
-    marginTop: 20,
+    marginTop: 10,
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#1E1E1E',
-    padding: 12,
+    padding:10,
     borderRadius: 25,
     marginRight: 12,
       },
@@ -299,6 +398,7 @@ const styles = StyleSheet.create({
    transactionsList: {
     flex: 1,
     padding: 10,
+    
   },
   dateGroup: {
     marginBottom: 10,
@@ -377,5 +477,22 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  modalContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'white',
+    borderRadius: 25,
+    height: '80%',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
 });
