@@ -9,6 +9,7 @@ import { tokenCache } from '@/cache';
 import React from 'react';
 import { TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -50,6 +51,15 @@ const RootLayout = () => {
 const RootLayoutNav = () => {
   const { isSignedIn } = useAuth();
   const { user } = useUser();
+  const checkPinCreated = async (userId: string) => {
+    try {
+      const hasPin = await AsyncStorage.getItem(`userPin_${userId}`);
+      return hasPin !== null;
+    } catch (error) {
+      console.error('Error checking PIN:', error);
+      return false;
+    }
+  };
 
   useEffect(() => {
     const checkUserPin = async () => {
@@ -70,6 +80,7 @@ const RootLayoutNav = () => {
 
   // Not signed in - show public routes without headers
   return (
+
     <Stack>
       <Stack.Screen name="signup" options={{
         statusBarBackgroundColor: 'black',
@@ -85,6 +96,20 @@ const RootLayoutNav = () => {
            </Link>
          ),
       }} />
+        <Stack.Screen 
+        name="PinCreation" 
+        options={{ 
+          headerShown: false ,
+          headerBackTitle: '',
+          headerShadowVisible: false,
+          headerRight: () => (
+            <Link href={'/help'} asChild>
+              <TouchableOpacity>
+                <Ionicons name="help-circle-outline" size={34} color= "white" />
+              </TouchableOpacity>
+            </Link>)
+        }}
+      />
     </Stack>
   );
 };

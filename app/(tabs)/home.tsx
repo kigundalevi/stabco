@@ -206,14 +206,14 @@ export default function WalletScreen() {
                 style={styles.transaction} disabled={true}  
                  >
                 <View style={styles.transactionLeft}>
-                  {(String(transaction.name ?? '')).includes('Bank') || (String(transaction.name ?? '')).includes('Shazam') ? (
+                  {(transaction.name ?? '').includes('Bank') || (transaction.name ?? '').includes('Shazam') ? (
                     <View style={styles.bankIcon}>
                       <Ionicons name="card" size={24} color="white" />
                     </View>
                   ) : (
                     <View style={[styles.userInitial, { backgroundColor: '#7C4DFF' }]}>
                       <Text style={styles.initialText}>
-                        {String(transaction.name ?? '').split(' ').map((n: string) => n[0]).join('')}
+                        {(transaction.name ?? '').split(' ').map((n: any[]) => n[0]).join('')}
                       </Text>
                     </View>
                   )}
@@ -483,8 +483,9 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'white',
-    borderRadius: 25,
+    backgroundColor: '#1E1E1E',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     height: '80%',
     elevation: 5,
     shadowColor: '#000',

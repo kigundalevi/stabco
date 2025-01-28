@@ -58,7 +58,7 @@ const google = React.useCallback(async () => {
       if (hasPinCreated) {
         router.push('/(tabs)/home');
       } else {
-        router.push('pincreation');
+        router.push('/pinCreation');
       }
     }
   } catch (err) {

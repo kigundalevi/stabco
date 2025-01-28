@@ -1,4 +1,3 @@
-// PinCreationScreen.js
 import React, { useState } from 'react';
 import { View, Text, Alert, StyleSheet, TextInput } from 'react-native';
 import { useUser } from '@clerk/clerk-expo';
@@ -34,7 +33,7 @@ const PinInput = ({ value, onChange, maxLength = 4 }: { value: string; onChange:
   );
 };
 
-const PinCreationScreen = () => {
+const pincreation = () => {
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [step, setStep] = useState(1); // 1 for initial PIN, 2 for confirmation
@@ -164,4 +163,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default PinCreationScreen;
+export default pincreation;
