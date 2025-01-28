@@ -7,6 +7,8 @@ import * as WebBrowser from "expo-web-browser";
 import React from 'react';
 import { useOAuth } from '@clerk/clerk-expo';
 import * as Linking from 'expo-linking';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router } from 'expo-router';
  
 
 export const useWarmUpBrowser = () => {
@@ -31,23 +33,36 @@ useWarmUpBrowser()
 
 const { startOAuthFlow } = useOAuth({ strategy: 'oauth_google' })
 
+const checkPinCreated = async (userId: string) => {
+  try {
+    const hasPin = await AsyncStorage.getItem(`userPin_${userId}`);
+    return hasPin !== null;
+  } catch (error) {
+    console.error('Error checking PIN:', error);
+    return false;
+  }
+};
+
 const google = React.useCallback(async () => {
   try {
     const { createdSessionId, signIn, signUp, setActive } = await startOAuthFlow({
       redirectUrl: Linking.createURL('/dashboard', { scheme: 'myapp' }),
-    })
+    });
 
-    // If sign in was successful, set the active session
     if (createdSessionId) {
-      setActive!({ session: createdSessionId })
-    } else {
-      // Use signIn or signUp returned from startOAuthFlow
-      // for next steps, such as MFA
+      setActive!({ session: createdSessionId });
+      
+      // Check if user has created PIN
+      const hasPinCreated = await checkPinCreated(createdSessionId);
+      
+      if (hasPinCreated) {
+        router.push('/(tabs)/home');
+      } else {
+        router.push('pincreation');
+      }
     }
   } catch (err) {
-    // See https://clerk.com/docs/custom-flows/error-handling
-    // for more info on error handling
-    console.error(JSON.stringify(err, null, 2))
+    console.error(JSON.stringify(err, null, 2));
   }
 }, [])
 

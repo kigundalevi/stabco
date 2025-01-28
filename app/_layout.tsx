@@ -3,7 +3,7 @@ import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
-import { ClerkProvider, ClerkLoaded, SignedIn, useAuth } from '@clerk/clerk-expo';
+import { ClerkProvider, ClerkLoaded, SignedIn, useAuth, useUser } from '@clerk/clerk-expo';
 import { Slot, Redirect, Stack, Link ,router} from 'expo-router';
 import { tokenCache } from '@/cache';
 import React from 'react';
@@ -49,18 +49,23 @@ const RootLayout = () => {
 
 const RootLayoutNav = () => {
   const { isSignedIn } = useAuth();
+  const { user } = useUser();
+
+  useEffect(() => {
+    const checkUserPin = async () => {
+      if (isSignedIn && user) {
+        const hasPinCreated = await checkPinCreated(user.id);
+        if (!hasPinCreated) {
+          router.push('/pincreation');
+        }
+      }
+    };
+    
+    checkUserPin();
+  }, [isSignedIn, user]);
 
   if (isSignedIn) {
-    return (
-      <>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)"/>
-        </Stack>
-        <SignedIn>
-          <Redirect href ="/(tabs)/home" />
-        </SignedIn>
-      </>
-    );
+    return <Redirect href="/(tabs)/home" />;
   }
 
   // Not signed in - show public routes without headers

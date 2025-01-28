@@ -206,14 +206,14 @@ export default function WalletScreen() {
                 style={styles.transaction} disabled={true}  
                  >
                 <View style={styles.transactionLeft}>
-                  {(transaction.name ?? '').includes('Bank') || (transaction.name ?? '').includes('Shazam') ? (
+                  {(String(transaction.name ?? '')).includes('Bank') || (String(transaction.name ?? '')).includes('Shazam') ? (
                     <View style={styles.bankIcon}>
                       <Ionicons name="card" size={24} color="white" />
                     </View>
                   ) : (
                     <View style={[styles.userInitial, { backgroundColor: '#7C4DFF' }]}>
                       <Text style={styles.initialText}>
-                        {(transaction.name ?? '').split(' ').map((n: any[]) => n[0]).join('')}
+                        {String(transaction.name ?? '').split(' ').map((n: string) => n[0]).join('')}
                       </Text>
                     </View>
                   )}
