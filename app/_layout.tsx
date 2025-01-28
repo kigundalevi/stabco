@@ -13,26 +13,22 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 SplashScreen.preventAutoHideAsync();
 
-const RootLayoutNav = () => {
+const InitialLayout = () => {
   const { isSignedIn } = useAuth();
   const { user } = useUser();
-
-  const checkPinCreated = async (userId: string) => {
-    try {
-      const hasPin = await AsyncStorage.getItem(`userPin_${userId}`);
-      return hasPin !== null;
-    } catch (error) {
-      console.error('Error checking PIN:', error);
-      return false;
-    }
-  };
 
   useEffect(() => {
     const checkUserPin = async () => {
       if (isSignedIn && user) {
-        const hasPinCreated = await checkPinCreated(user.id);
-        if (!hasPinCreated) {
-          router.push('/pincreation');
+        try {
+          const hasPin = await AsyncStorage.getItem(`userPin_${user.id}`);
+          if (hasPin) {
+            router.push('/(tabs)/home');
+          } else {
+            router.push('/pincreation');
+          }
+        } catch (error) {
+          console.error('Error checking PIN:', error);
         }
       }
     };
@@ -78,7 +74,7 @@ const RootLayout = () => {
   return (
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
       <ClerkLoaded>
-        <RootLayoutNav />
+        <InitialLayout />
       </ClerkLoaded>
     </ClerkProvider>
   );

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, Alert, StyleSheet, TextInput } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, Alert, StyleSheet, TextInput, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { useUser } from '@clerk/clerk-expo';
 import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
@@ -9,27 +9,55 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Custom PIN Input component
 const PinInput = ({ value, onChange, maxLength = 4 }: { value: string; onChange: (text: string) => void; maxLength?: number }) => {
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow',
+      () => setKeyboardVisible(true)
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      'keyboardDidHide',
+      () => setKeyboardVisible(false)
+    );
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
+
+  const showKeyboard = () => {
+    inputRef.current?.focus();
+  };
+
   return (
-    <View style={styles.pinContainer}>
-      {[...Array(maxLength)].map((_, index) => (
-        <View
-          key={index}
+    <TouchableWithoutFeedback onPress={showKeyboard}>
+      <View style={styles.pinContainer}>
+        {[...Array(maxLength)].map((_, index) => (
+          <View
+            key={index}
+            style={[
+              styles.pinDot,
+              value.length > index && styles.pinDotFilled
+            ]}
+          />
+        ))}
+        <TextInput
+          ref={inputRef}
+          value={value}
+          onChangeText={onChange}
+          maxLength={maxLength}
+          keyboardType="numeric"
           style={[
-            styles.pinDot,
-            value.length > index && styles.pinDotFilled
+            styles.hiddenInput,
+            { position: 'absolute', opacity: 0 }
           ]}
+          secureTextEntry
         />
-      ))}
-      <TextInput
-        value={value}
-        onChangeText={onChange}
-        maxLength={maxLength}
-        keyboardType="numeric"
-        style={styles.hiddenInput}
-        secureTextEntry
-        autoFocus
-      />
-    </View>
+      </View>
+    </TouchableWithoutFeedback>
   );
 };
 
@@ -55,43 +83,34 @@ const handlePinChange = (value: string): void => {
     }
 };
 
-  const validateAndCreateWallet = async (confirmedPin: string) => {
-    if (pin !== confirmedPin) {
-      Alert.alert(
-        'PIN Mismatch',
-        'The PINs do not match. Please try again.',
-        [{ text: 'OK', onPress: () => resetPinCreation() }]
-      );
-      return;
-    }
+const validateAndCreateWallet = async (confirmedPin: string) => {
+  if (pin !== confirmedPin) {
+    Alert.alert(
+      'PIN Mismatch',
+      'The PINs do not match. Please try again.',
+      [{ text: 'OK', onPress: () => resetPinCreation() }]
+    );
+    return;
+  }
 
-    try {
-      // Create wallet using your API
-      const response = await axios.post(`${API_URL}/create`, {
-        name: user?.firstName, // or user.fullName based on your preference
-        pin: pin
-      });
+  try {
+    // Store PIN securely using Expo SecureStore
+    await SecureStore.setItemAsync('userPIN', pin);
+    
+    // Store PIN using AsyncStorage
+    await AsyncStorage.setItem(`userPin_${user?.id}`, pin);
 
-      if (response.data.success) {
-        // Store PIN securely using Expo SecureStore
-        await SecureStore.setItemAsync('userPIN', pin);
-        
-        // Store PIN using AsyncStorage
-        await AsyncStorage.setItem(`userPin_${user?.id}`, pin);
-
-        // Navigate to home screen
-       router.push('/(tabs)/home');
-      } else {
-        throw new Error(response.data.error);
-      }
-    } catch (error) {
-      Alert.alert(
-        'Error',
-        'Failed to create wallet. Please try again.',
-        [{ text: 'OK', onPress: () => resetPinCreation() }]
-      );
-    }
-  };
+    // Navigate to home screen
+    router.push('/(tabs)/home');
+    
+  } catch (error) {
+    Alert.alert(
+      'Error',
+      'Failed to save PIN. Please try again.',
+      [{ text: 'OK', onPress: () => resetPinCreation() }]
+    );
+  }
+};
 
   const resetPinCreation = () => {
     setPin('');
