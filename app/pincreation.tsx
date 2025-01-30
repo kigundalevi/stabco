@@ -10,7 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // Custom PIN Input component
 const PinInput = ({ value, onChange, maxLength = 4 }: { value: string; onChange: (text: string) => void; maxLength?: number }) => {
   const [keyboardVisible, setKeyboardVisible] = useState(false);
-  const inputRef = useRef(null);
+  const inputRef = useRef<TextInput>(null);
 
   useEffect(() => {
     const keyboardDidShowListener = Keyboard.addListener(

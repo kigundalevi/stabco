@@ -1,21 +1,27 @@
-import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, Platform, StatusBar, Animated } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, Platform, StatusBar, Animated, ActivityIndicator, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth, useUser } from '@clerk/clerk-expo';
-import React, { useState, useEffect, JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import Pay from '../components/Pay';
 import Withdraw from '../components/Withdraw';
 import AddMoney from '../components/AddMoney';
+import axios from 'axios';
 
 export default function WalletScreen() {
   const router = useRouter();
   const { user } = useUser();
-  const [groupedTransactions, setGroupedTransactions] = useState<{ [key: string]: typeof sampleTransactions }>([]);
+  const [groupedTransactions, setGroupedTransactions] = useState<{ [key: string]: any[] }>({});
   const [modalVisible, setModalVisible] = useState(false);
   const [activeModal, setActiveModal] = useState<'pay' | 'add' | 'withdraw' | null>(null);
   const slideAnim = useRef(new Animated.Value(0)).current;
-  const [balance, setBalance] = useState(5000); // Initial balance in KES
-  console.log(user);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [balances, setBalances] = useState({
+    kes: 0,
+    usdc: 0,
+    rate: 129 // Initial hardcoded rate
+  });
 
   const showModal = (type: 'pay' | 'add' | 'withdraw') => {
     setActiveModal(type);
@@ -38,70 +44,56 @@ export default function WalletScreen() {
     });
   };
 
-  // Sample transaction data
-  const sampleTransactions = [
-    {
-      id: 1,
-      date: '2025-01-19',
-      name: 'Levi Kigunda',
-      amount: 'US$0.05',
-      type: 'debit'
-    },
-    {
-      id: 2,
-      date: '2025-01-21',
-      name: 'Elvis karani',
-      amount: 'US$100',
-      type: 'credit'
-    },
-       {
-      id: 3,
-      date: '2024-11-01',
-      name: 'Bank Of Am',
-      amount: 'KES10,000.00',
-      type: 'credit',
-      status: 'Failed'
-    },
-    {
-      id: 4,
-      date: '2024-11-01',
-      name: 'Shazam, Inc.',
-      amount: 'KES10,000.00',
-      type: 'credit',
-      status: 'Failed'
-    },
-    {
-      id: 5,
-      date: '2024-10-01',
-      name: 'Shazam, Inc.',
-      amount: 'KES10,000.00',
-      type: 'credit',
-      status: 'Failed'
-    },
-    {
-      id: 6,
-      date: '2024-10-01',
-      name: 'Shazam, Inc.',
-      amount: 'KES10,000.00',
-      type: 'credit',
-      status: 'Failed'
-    },
-    {
-      id: 7,
-      date: '2024-10-01',
-      name: 'Shazam, Inc.',
-      amount: 'KES10,000.00',
-      type: 'credit',
-      status: 'Failed'
-    }
-  ];
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      
+      const [transactionsRes, balanceRes] = await Promise.all([
+        axios.get(`/api/wallet/transactions/${user?.firstName}`),
+        axios.get(`/api/wallet/usdc-balance/${user?.firstName}`)
+      ]);
 
-  useEffect(() => {
-    const formatDate = (dateString: string | number | Date) => {
+      const transactions = transactionsRes.data.transactions;
+      const usdcBalance = balanceRes.data.balance;
+
+      // Format transactions
+      const formattedTransactions = transactions.map((tx: any) => ({
+        id: tx._id,
+        date: tx.date,
+        name: tx.counterparty || 'System',
+        amount: tx.amount,
+        type: tx.type === 'send' ? 'sent' : 'received',
+        status: tx.status,
+        currency: tx.currency
+      }));
+
+      // Group transactions
+      const grouped = groupTransactions(formattedTransactions);
+      setGroupedTransactions(grouped);
+
+      // Update balances with hardcoded rate
+      setBalances(prev => ({
+        ...prev,
+        kes: usdcBalance * prev.rate,
+        usdc: usdcBalance
+      }));
+
+    } catch (err) {
+      setError('Failed to load data. Please pull to refresh.');
+      console.error('Fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const groupTransactions = (transactions: any[]) => {
+    const formatDate = (dateString: string) => {
       const date = new Date(dateString);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const transactionDate = new Date(date.setHours(0, 0, 0, 0));
+      const transactionDate = new Date(date);
+      transactionDate.setHours(0, 0, 0, 0);
       
       if (transactionDate.getTime() === today.getTime()) {
         return 'Today';
@@ -114,43 +106,45 @@ export default function WalletScreen() {
       });
     };
 
-    const grouped = sampleTransactions.reduce((groups: { [key: string]: typeof sampleTransactions }, transaction) => {
+    const grouped = transactions.reduce((groups: { [key: string]: any[] }, transaction) => {
       const dateKey = formatDate(transaction.date);
       if (!groups[dateKey]) {
         groups[dateKey] = [];
       }
       groups[dateKey].push(transaction);
       return groups;
-    }, {} as { [key: string]: typeof sampleTransactions });
+    }, {});
 
-    const sortedGroups = Object.keys(grouped)
+    return Object.keys(grouped)
       .sort((a, b) => {
         if (a === 'Today') return -1;
         if (b === 'Today') return 1;
-        return new Date(b.replace('Today', new Date().toISOString())).getTime() - 
-               new Date(a === 'Today' ? new Date().toISOString() : a).getTime();
+        return new Date(b).getTime() - new Date(a).getTime();
       })
-      .reduce((obj: { [key: string]: typeof sampleTransactions }, key) => {
+      .reduce((obj: { [key: string]: any[] }, key) => {
         obj[key] = grouped[key];
         return obj;
       }, {});
+  };
 
-    setGroupedTransactions(sortedGroups);
-  }, []);
+  useEffect(() => {
+    if (user) {
+      fetchData();
+    }
+  }, [user]);
+
+  const handleTransactionSuccess = () => {
+    fetchData();
+  };
 
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.profileSection}>
-          <TouchableOpacity 
-                       onPress={() => router.push('/profile')}
-          >
+          <TouchableOpacity onPress={() => router.push('/profile')}>
             {user?.imageUrl ? (
-              <Image 
-                source={{ uri: user.imageUrl }} 
-                style={styles.profileImage} 
-              />
+              <Image source={{ uri: user.imageUrl }} style={styles.profileImage} />
             ) : (
               <View style={styles.profileInitial}>
                 <Text style={styles.initialText}>
@@ -163,20 +157,23 @@ export default function WalletScreen() {
             </View>
           </TouchableOpacity>
           <View>
-            <Text style={styles.balance}>KES 5000</Text>
-            <Text style={styles.subBalance}>0.05 USDP</Text>
+            <Text style={styles.balance}>
+              KES {balances.kes.toLocaleString('en-KE', { maximumFractionDigits: 2 })}
+            </Text>
+            <Text style={styles.subBalance}>
+              {balances.usdc.toFixed(2)} USDC (1 USDC = KES {balances.rate.toFixed(2)})
+            </Text>
           </View>
         </View>
         <View style={styles.headerIcons}>
-            <TouchableOpacity style={styles.adduserIcon}>
+          <TouchableOpacity style={styles.adduserIcon}>
             <Feather name="user-plus" size={24} color="white" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.searchIcon}>
-              <Ionicons name="search" size={24} color="white" />
-            </TouchableOpacity>
-          </View>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.searchIcon}>
+            <Ionicons name="search" size={24} color="white" />
+          </TouchableOpacity>
+        </View>
       </View>
-      
 
       {/* Action Buttons */}
       <View style={styles.actionButtons}>
@@ -196,49 +193,66 @@ export default function WalletScreen() {
         </TouchableOpacity>
       </View>
 
-          {/* Transactions List */}
-      <ScrollView 
+      {/* Transactions List */}
+      <ScrollView
         style={styles.transactionsList}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={loading}
+            onRefresh={fetchData}
+            tintColor="#fff"
+          />
+        }
       >
-        {Object.entries(groupedTransactions).map(([date, transactions]) => (
-          <View key={date} style={styles.dateGroup}>
-            <Text style={styles.dateHeader}>{date}</Text>
-            {(transactions as any[]).map((transaction: { id: Key | null | undefined; name: string | number | boolean | ReactElement<any, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined; status: string | number | boolean | ReactElement<any, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | null | undefined; type: string; amount: string | number | boolean | ReactElement<any, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | null | undefined; }) => (
-              <TouchableOpacity  
-                           key={transaction.id} 
-                style={styles.transaction} disabled={true}  
-                 >
-                <View style={styles.transactionLeft}>
-                  {(typeof transaction.name === 'string' && (transaction.name.includes('Bank') || transaction.name.includes('Shazam'))) ? (
-                    <View style={styles.bankIcon}>
-                      <Ionicons name="card" size={24} color="white" />
-                    </View>
-                  ) : (
-                    <View style={[styles.userInitial, { backgroundColor: '#7C4DFF' }]}>
-                      <Text style={styles.initialText}>
-                        {(typeof transaction.name === 'string' ? transaction.name : '').split(' ').map((n: string) => n[0]).join('')}
-                      </Text>
-                    </View>
-                  )}
-                  <View>
-                    <Text style={styles.transactionName}>{transaction.name}</Text>
-                    {transaction.status && (
-                      <Text style={styles.transactionStatus}>{transaction.status}</Text>
+        {loading ? (
+          <ActivityIndicator size="large" color="#fff" style={styles.loader} />
+        ) : error ? (
+          <Text style={styles.errorText}>{error}</Text>
+        ) : Object.entries(groupedTransactions).length === 0 ? (
+          <Text style={styles.noTransactions}>No transactions found</Text>
+        ) : (
+          Object.entries(groupedTransactions).map(([date, transactions]) => (
+            <View key={date} style={styles.dateGroup}>
+              <Text style={styles.dateHeader}>{date}</Text>
+              {(transactions as any[]).map((transaction) => (
+                <TouchableOpacity
+                  key={transaction.id}
+                  style={styles.transaction}
+                  disabled={true}
+                >
+                  <View style={styles.transactionLeft}>
+                    {(transaction.name.includes('Bank') || transaction.name.includes('Shazam')) ? (
+                      <View style={styles.bankIcon}>
+                        <Ionicons name="card" size={24} color="white" />
+                      </View>
+                    ) : (
+                      <View style={[styles.userInitial, { backgroundColor: '#7C4DFF' }]}>
+                        <Text style={styles.initialText}>
+                          {transaction.name.split(' ').map((n: string) => n[0]).join('')}
+                        </Text>
+                      </View>
                     )}
+                    <View>
+                      <Text style={styles.transactionName}>{transaction.name}</Text>
+                      {transaction.status && transaction.status !== 'completed' && (
+                        <Text style={styles.transactionStatus}>{transaction.status}</Text>
+                      )}
+                    </View>
                   </View>
-                </View>
-                <Text style={[
-                  styles.transactionAmount,
-                  { color: transaction.type === 'credit' ? '#00C853' : '#FF3D00' }
-                ]}>
-                  {transaction.amount}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        ))}
-        {/* Add extra padding at bottom for Pay Button */}
+                  <Text style={[
+                    styles.transactionAmount,
+                    { color: transaction.type === 'sent' ? '#FF3D00' : '#00C853' }
+                  ]}>
+                    {transaction.type === 'sent' ? '-' : '+'}
+                    {transaction.currency === 'KES' ? 'KES' : 'US$'}
+                    {transaction.amount.toLocaleString('en-KE')}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          ))
+        )}
         <View style={styles.bottomPadding} />
       </ScrollView>
 
@@ -271,19 +285,18 @@ export default function WalletScreen() {
           {activeModal === 'pay' && (
             <Pay 
               onClose={hideModal} 
-              balance={balance}
+              balance={balances.kes}
               onSuccess={(amount: number) => {
-                setBalance(prev => prev - amount);
-                // Update transactions here if needed
+                handleTransactionSuccess();
                 hideModal();
               }}
             />
           )}
           {activeModal === 'add' && (
             <AddMoney 
-               onClose={hideModal}
+              onClose={hideModal}
               onSuccess={(amount: number) => {
-                setBalance(prev => prev + amount);
+                handleTransactionSuccess();
                 hideModal();
               }}
             />
@@ -291,9 +304,9 @@ export default function WalletScreen() {
           {activeModal === 'withdraw' && (
             <Withdraw 
               onClose={hideModal}
-              balance={balance}
+              balance={balances.kes}
               onSuccess={(amount: number) => {
-                setBalance(prev => prev - amount);
+                handleTransactionSuccess();
                 hideModal();
               }}
             />
@@ -303,14 +316,12 @@ export default function WalletScreen() {
     </View>
   );
 }
- 
-
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'black',
-      },
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -318,14 +329,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 20,
     padding: 16,
-    
   },
   profileSection: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
-   profileImage: {
+  profileImage: {
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -367,17 +377,9 @@ const styles = StyleSheet.create({
     borderRadius: 25,
   },
   adduserIcon: {
-       backgroundColor: '#1E1E1E',
+    backgroundColor: '#1E1E1E',
     padding: 10,
     borderRadius: 25,
-  },
-  searchButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#1E1E1E',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   actionButtons: {
     flexDirection: 'row',
@@ -390,19 +392,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#1E1E1E',
-    padding:10,
+    padding: 10,
     borderRadius: 25,
     marginRight: 12,
-      },
+  },
   actionButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '500',
   },
-   transactionsList: {
+  transactionsList: {
     flex: 1,
     padding: 10,
-    
   },
   dateGroup: {
     marginBottom: 10,
@@ -470,7 +471,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'black',
     paddingHorizontal: 16,
     paddingVertical: 16,
-     },
+  },
   payButton: {
     backgroundColor: '#223F57',
     padding: 16,
@@ -499,5 +500,19 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
+  },
+  loader: {
+    marginTop: 20,
+  },
+  errorText: {
+    color: '#FF3D00',
+    textAlign: 'center',
+    marginTop: 20,
+    paddingHorizontal: 20,
+  },
+  noTransactions: {
+    color: '#888',
+    textAlign: 'center',
+    marginTop: 20,
   },
 });
