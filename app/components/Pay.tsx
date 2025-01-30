@@ -1,8 +1,34 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, TextInput, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, TextInput, Image, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useUser } from '@clerk/clerk-expo';
+import axios from 'axios';
 
 
+const PinInput = ({ value, onChange, maxLength = 4 }) => {
+  return (
+    <View style={styles.pinContainer}>
+      {[...Array(maxLength)].map((_, index) => (
+        <View
+          key={index}
+          style={[
+            styles.pinDot,
+            value.length > index && styles.pinDotFilled
+          ]}
+        />
+      ))}
+      <TextInput
+        value={value}
+        onChangeText={onChange}
+        maxLength={maxLength}
+        keyboardType="numeric"
+        style={styles.hiddenInput}
+        secureTextEntry
+        autoFocus
+      />
+    </View>
+  );
+};
 
 type PayProps = {
 
@@ -15,19 +41,39 @@ type PayProps = {
   };
   
 
-type PaymentStep = 'select' | 'amount' | 'confirm' | 'success';
+  type PaymentStep = 'select' | 'amount' | 'confirm' | 'pin' | 'success';
 
 const Pay: React.FC<PayProps> = ({ onClose, balance }) => {
   const [amount, setAmount] = useState('');
   const [selectedFriend, setSelectedFriend] = useState<string | null>(null);
   const [step, setStep] = useState<PaymentStep>('select');
+  const [pin, setPin] = useState('');
+  const { user } = useUser();
+  const API_URL = 'YOUR_API_URL'; // Replace with your API URL
 
-  const handleSend = () => {
-    // Here you would typically make an API call to process the payment
-    setStep('success');
-    setTimeout(() => {
-      onClose();
-    }, 2000);
+  const handlePinSubmit = async () => {
+    try {
+      // Call your send-usdc endpoint
+      const response = await axios.post(`${API_URL}/send-usdc`, {
+        senderName: user?.firstName, // or however you store the user's name
+        pin: pin,
+        recipientName: selectedFriend,
+        amount: parseFloat(amount)
+      });
+
+      if (response.data.success) {
+        setStep('success');
+        setTimeout(() => {
+          onClose();
+        }, 2000);
+      } else {
+        Alert.alert('Error', 'Transaction failed. Please try again.');
+        setPin('');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to process transaction. Please try again.');
+      setPin('');
+    }
   };
 
   const renderFriendSelection = () => (
@@ -100,12 +146,40 @@ const Pay: React.FC<PayProps> = ({ onClose, balance }) => {
       </TouchableOpacity>
     </View>
   );
+     
+  const renderPinVerification = () => (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => setStep('confirm')}>
+          <Icon name="arrow-back" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+        <Text style={styles.title}>Enter PIN</Text>
+        <View style={{ width: 24 }} />
+      </View>
+
+      <View style={styles.pinVerificationContainer}>
+        <Text style={styles.pinInstructions}>
+          Enter your 4-digit PIN to confirm the transaction
+        </Text>
+        
+        <PinInput
+          value={pin}
+          onChange={(value) => {
+            setPin(value);
+            if (value.length === 4) {
+              handlePinSubmit();
+            }
+          }}
+        />
+      </View>
+    </View>
+  );
 
   const renderConfirmation = () => (
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => setStep('amount')}>
-        <Icon name="arrow-back" size={24} color="#FFFFFF" />
+          <Icon name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.title}>Confirm Payment</Text>
         <View style={{ width: 24 }} />
@@ -125,13 +199,14 @@ const Pay: React.FC<PayProps> = ({ onClose, balance }) => {
 
       <TouchableOpacity 
         style={styles.sendButton}
-        onPress={handleSend}
+        onPress={() => setStep('pin')} // Changed to go to PIN verification
       >
-          <Icon name="send" size={20} color="#FFFFFF" style={styles.sendIcon} />
-        <Text style={styles.sendButtonText}>Send Payment</Text>
+        <Icon name="send" size={20} color="#FFFFFF" style={styles.sendIcon} />
+        <Text style={styles.sendButtonText}>Confirm & Enter PIN</Text>
       </TouchableOpacity>
     </View>
   );
+ 
 
   const renderSuccess = () => (
     <View style={styles.successContainer}>
@@ -153,6 +228,8 @@ const Pay: React.FC<PayProps> = ({ onClose, balance }) => {
         return renderAmountInput();
       case 'confirm':
         return renderConfirmation();
+        case 'pin':
+          return renderPinVerification();
       case 'success':
         return renderSuccess();
       default:
@@ -294,6 +371,41 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  pinVerificationContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  pinInstructions: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 30,
+  },
+  pinContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  pinDot: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+    margin: 10,
+  },
+  pinDotFilled: {
+    backgroundColor: '#FFFFFF',
+  },
+  hiddenInput: {
+    position: 'absolute',
+    width: 1,
+    height: 1,
+    opacity: 0,
   },
   successContainer: {
     flex: 1,

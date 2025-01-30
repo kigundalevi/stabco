@@ -4,6 +4,8 @@ import { useAuth, useUser } from '@clerk/clerk-expo';
 import React, { useState, useEffect, JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal, useRef } from 'react';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import Pay from '../components/Pay';
+import Withdraw from '../components/Withdraw';
+import AddMoney from '../components/AddMoney';
 
 export default function WalletScreen() {
   const router = useRouter();
@@ -13,6 +15,7 @@ export default function WalletScreen() {
   const [activeModal, setActiveModal] = useState<'pay' | 'add' | 'withdraw' | null>(null);
   const slideAnim = useRef(new Animated.Value(0)).current;
   const [balance, setBalance] = useState(5000); // Initial balance in KES
+  console.log(user);
 
   const showModal = (type: 'pay' | 'add' | 'withdraw') => {
     setActiveModal(type);
@@ -124,8 +127,8 @@ export default function WalletScreen() {
       .sort((a, b) => {
         if (a === 'Today') return -1;
         if (b === 'Today') return 1;
-        return new Date(b.replace('Today', new Date().toISOString())) - 
-               new Date(a === 'Today' ? new Date().toISOString() : a);
+        return new Date(b.replace('Today', new Date().toISOString())).getTime() - 
+               new Date(a === 'Today' ? new Date().toISOString() : a).getTime();
       })
       .reduce((obj: { [key: string]: typeof sampleTransactions }, key) => {
         obj[key] = grouped[key];
@@ -173,6 +176,7 @@ export default function WalletScreen() {
             </TouchableOpacity>
           </View>
       </View>
+      
 
       {/* Action Buttons */}
       <View style={styles.actionButtons}>
@@ -206,14 +210,14 @@ export default function WalletScreen() {
                 style={styles.transaction} disabled={true}  
                  >
                 <View style={styles.transactionLeft}>
-                  {(transaction.name ?? '').includes('Bank') || (transaction.name ?? '').includes('Shazam') ? (
+                  {(typeof transaction.name === 'string' && (transaction.name.includes('Bank') || transaction.name.includes('Shazam'))) ? (
                     <View style={styles.bankIcon}>
                       <Ionicons name="card" size={24} color="white" />
                     </View>
                   ) : (
                     <View style={[styles.userInitial, { backgroundColor: '#7C4DFF' }]}>
                       <Text style={styles.initialText}>
-                        {(transaction.name ?? '').split(' ').map((n: any[]) => n[0]).join('')}
+                        {(typeof transaction.name === 'string' ? transaction.name : '').split(' ').map((n: string) => n[0]).join('')}
                       </Text>
                     </View>
                   )}
@@ -277,7 +281,7 @@ export default function WalletScreen() {
           )}
           {activeModal === 'add' && (
             <AddMoney 
-              onClose={hideModal}
+               onClose={hideModal}
               onSuccess={(amount: number) => {
                 setBalance(prev => prev + amount);
                 hideModal();
