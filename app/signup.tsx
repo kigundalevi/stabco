@@ -98,7 +98,7 @@ const google = React.useCallback(async () => {
       {/* Privacy Policy and Terms */}
       <View style={styles.policyContainer}>
         <Text style={styles.policyText}>Read our </Text>
-        <Link href="/privacy" style={styles.linkText}>
+        <Link href="/privacy" style={styles.linkText} >
           Privacy Policy
         </Link>
         <Text style={styles.policyText}> & </Text>
