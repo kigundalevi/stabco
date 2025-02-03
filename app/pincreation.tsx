@@ -110,6 +110,7 @@ const pincreation = () => {
       // Securely store the PIN
       await SecureStore.setItemAsync('userPIN', pin);
       await AsyncStorage.setItem(`userPin_${user?.id}`, pin);
+      
 
       // Navigate to the home screen 
       router.push('/(tabs)/home');

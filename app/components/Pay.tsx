@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, TextInput, Image, Alert } fro
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useUser } from '@clerk/clerk-expo';
 import axios from 'axios';
+import * as SecureStore from 'expo-secure-store';
 
 
 interface PinInputProps {
@@ -57,32 +58,46 @@ const Pay: React.FC<PayProps> = ({ onClose, balance }) => {
   const { user } = useUser();
   const API_URL = 'https://hidden-eyrie-76070-9c205d882c7e.herokuapp.com';   // Replace with your API URL
 
-  const handlePinSubmit = async () => {
+  const handlePinSubmit = async (submittedPin: string) => {
+
+    if (!/^\d{4}$/.test(submittedPin)) {
+      Alert.alert('Invalid PIN', 'Your PIN must be exactly 4 digits.');
+      return;
+    }
    
+    // Convert KES to USDC using the exchange rate
+    const exchangeRate = 129; // from home.tsx
+    const usdcAmount = parseFloat(amount) / exchangeRate;
+     
+    const storedPin = await SecureStore.getItemAsync('userPIN');
+
+    if (submittedPin !== storedPin) {
+      Alert.alert('Invalid PIN', 'The PIN you entered is incorrect');
+      return;
+    }
+
+         console.log('FINAL PIN FOR SUBMISSION:', submittedPin);
+  console.log('FINAL PIN LENGTH:', submittedPin.length);
+
+    // Detailed logging of the payload
+    console.log('Sending payload:', {
+      senderName: user?.fullName,
+      pin: pin, // Be careful not to log actual PINs in production
+      recipientName: selectedFriend,
+      amount: usdcAmount
+    });
+     
+    const payload = {
+      senderName: user?.fullName,
+      pin: submittedPin,
+      recipientName: selectedFriend,
+      amount: usdcAmount.toFixed(6)
+    };
      try {
-      // Convert KES to USDC using the exchange rate
-      const exchangeRate = 129; // from home.tsx
-      const usdcAmount = parseFloat(amount) / exchangeRate;
-  
-      // Detailed logging of the payload
-      console.log('Sending payload:', {
-        senderName: user?.fullName,
-        pin: pin, // Be careful not to log actual PINs in production
-        recipientName: selectedFriend,
-        amount: usdcAmount
-      });
   
       // Call your send-usdc endpoint with USDC amount
-      const response = await axios.post(`${API_URL}/api/send-usdc`, {
-        senderName: user?.fullName,
-        pin: pin,
-        recipientName: selectedFriend,
-        amount: usdcAmount // Send amount in USDC
-      }, {
-        // Add headers to help with debugging
-        headers: {
-          'Content-Type': 'application/json'
-        }
+      const response = await axios.post(`${API_URL}/api/send-usdc`, payload, {
+        headers: { 'Content-Type': 'application/json' },
       });
   
       if (response.data.success) {
@@ -204,19 +219,22 @@ const Pay: React.FC<PayProps> = ({ onClose, balance }) => {
         </Text>
         
         <PinInput
-            value={pin}
-            onChange={(value: string) => {
-              // Strictly limit to 4 digits
-              const pin= value.replace(/[^0-9]/g, '');
-    
-              setPin(pin);
+              value={pin}
+              onChange={(value: string) => {
+                console.log('RAW INPUT:', value);
+                // Remove any non-numeric characters
+                const newPin = value.replace(/[^0-9]/g, '');
+                console.log('PROCESSED PIN:', newPin);
+                console.log('PROCESSED PIN LENGTH:', newPin.length);
+                setPin(newPin);
+                // When exactly 4 digits are entered, immediately submit.
+                if (newPin.length === 4) {
+                  console.log('ATTEMPTING SUBMIT WITH:', newPin);
+                  handlePinSubmit(newPin);
+                }
+              }}
+            />
 
-              // Only submit when exactly 4 digits
-              if (pin.length === 4) {
-                handlePinSubmit();
-              }
-            }}
-          />
       
       </View>
     </View>

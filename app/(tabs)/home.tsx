@@ -247,7 +247,7 @@ export default function WalletScreen() {
                     { color: transaction.type === 'sent' ? '#FF3D00' : '#00C853' }
                   ]}>
                     {transaction.type === 'sent' ? '-' : '+'}
-                    {transaction.currency === 'KES' ? 'KES' : 'US$'}
+                    {transaction.currency === 'KES' ? 'KES' : '$'}
                     {transaction.amount.toLocaleString('en-KE')}
                   </Text>
                 </TouchableOpacity>
