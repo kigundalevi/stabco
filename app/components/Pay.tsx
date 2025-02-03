@@ -5,7 +5,13 @@ import { useUser } from '@clerk/clerk-expo';
 import axios from 'axios';
 
 
-const PinInput = ({ value, onChange, maxLength = 4 }) => {
+interface PinInputProps {
+  value: string;
+  onChange: (value: string) => void;
+  maxLength?: number;
+}
+
+const PinInput = ({ value, onChange, maxLength = 4 }: PinInputProps) => {
   return (
     <View style={styles.pinContainer}>
       {[...Array(maxLength)].map((_, index) => (
@@ -49,18 +55,36 @@ const Pay: React.FC<PayProps> = ({ onClose, balance }) => {
   const [step, setStep] = useState<PaymentStep>('select');
   const [pin, setPin] = useState('');
   const { user } = useUser();
-  const API_URL = 'YOUR_API_URL'; // Replace with your API URL
+  const API_URL = 'https://hidden-eyrie-76070-9c205d882c7e.herokuapp.com';   // Replace with your API URL
 
   const handlePinSubmit = async () => {
-    try {
-      // Call your send-usdc endpoint
-      const response = await axios.post(`${API_URL}/send-usdc`, {
-        senderName: user?.firstName, // or however you store the user's name
+   
+     try {
+      // Convert KES to USDC using the exchange rate
+      const exchangeRate = 129; // from home.tsx
+      const usdcAmount = parseFloat(amount) / exchangeRate;
+  
+      // Detailed logging of the payload
+      console.log('Sending payload:', {
+        senderName: user?.fullName,
+        pin: pin, // Be careful not to log actual PINs in production
+        recipientName: selectedFriend,
+        amount: usdcAmount
+      });
+  
+      // Call your send-usdc endpoint with USDC amount
+      const response = await axios.post(`${API_URL}/api/send-usdc`, {
+        senderName: user?.fullName,
         pin: pin,
         recipientName: selectedFriend,
-        amount: parseFloat(amount)
+        amount: usdcAmount // Send amount in USDC
+      }, {
+        // Add headers to help with debugging
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
-
+  
       if (response.data.success) {
         setStep('success');
         setTimeout(() => {
@@ -71,7 +95,24 @@ const Pay: React.FC<PayProps> = ({ onClose, balance }) => {
         setPin('');
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to process transaction. Please try again.');
+      // More detailed error logging
+      if (axios.isAxiosError(error)) {
+        console.error('Axios Error:', {
+          response: error.response?.data,
+          status: error.response?.status,
+          headers: error.response?.headers
+        });
+  
+        // More informative error message
+        Alert.alert(
+          'Transaction Error', 
+          error.response?.data?.message || 
+          'Failed to process transaction. Please check your details and try again.'
+        );
+      } else {
+        console.error('Unexpected Error:', error);
+        Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      }
       setPin('');
     }
   };
@@ -96,14 +137,14 @@ const Pay: React.FC<PayProps> = ({ onClose, balance }) => {
         <TouchableOpacity 
           style={styles.friendItem}
           onPress={() => {
-            setSelectedFriend('Levi Kigunda');
+            setSelectedFriend('elvis');
             setStep('amount');
           }}
         >
           <View style={styles.friendAvatar}>
-            <Text style={styles.avatarText}>LK</Text>
+            <Text style={styles.avatarText}>e</Text>
           </View>
-          <Text style={styles.friendName}>Levi Kigunda</Text>
+          <Text style={styles.friendName}>elvis</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -163,14 +204,20 @@ const Pay: React.FC<PayProps> = ({ onClose, balance }) => {
         </Text>
         
         <PinInput
-          value={pin}
-          onChange={(value) => {
-            setPin(value);
-            if (value.length === 4) {
-              handlePinSubmit();
-            }
-          }}
-        />
+            value={pin}
+            onChange={(value: string) => {
+              // Strictly limit to 4 digits
+              const pin= value.replace(/[^0-9]/g, '');
+    
+              setPin(pin);
+
+              // Only submit when exactly 4 digits
+              if (pin.length === 4) {
+                handlePinSubmit();
+              }
+            }}
+          />
+      
       </View>
     </View>
   );
@@ -193,7 +240,7 @@ const Pay: React.FC<PayProps> = ({ onClose, balance }) => {
         
         <View style={styles.confirmationDetail}>
           <Text style={styles.confirmLabel}>Amount</Text>
-          <Text style={styles.confirmValue}>${amount}</Text>
+          <Text style={styles.confirmValue}>{amount}</Text>
         </View>
       </View>
 
@@ -215,7 +262,7 @@ const Pay: React.FC<PayProps> = ({ onClose, balance }) => {
       </View>
       <Text style={styles.successTitle}>Payment Sent!</Text>
       <Text style={styles.successText}>
-        ${amount} has been sent to {selectedFriend}
+      KES {amount} (${(parseFloat(amount) / 129).toFixed(2)} USDC) sent to {selectedFriend}
       </Text>
     </View>
   );

@@ -64,58 +64,67 @@ const PinInput = ({ value, onChange, maxLength = 4 }: { value: string; onChange:
 const pincreation = () => {
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
-  const [step, setStep] = useState(1); // 1 for initial PIN, 2 for confirmation
+  const [step, setStep] = useState(1); // Step 1: Create PIN, Step 2: Confirm PIN
   const { user } = useUser();
   const navigation = useNavigation();
-  const API_URL = 'YOUR_API_URL'; // Replace with your API URL
+  const API_URL = 'https://hidden-eyrie-76070-9c205d882c7e.herokuapp.com';  
 
-const handlePinChange = (value: string): void => {
+  const handlePinChange = (value: string): void => {
     if (step === 1) {
-        setPin(value);
-        if (value.length === 4) {
-            setStep(2);
-        }
+      setPin(value);
+      if (value.length === 4) {
+        setStep(2);
+      }
     } else {
-        setConfirmPin(value);
-        if (value.length === 4) {
-            validateAndCreateWallet(value);
-        }
+      setConfirmPin(value);
+      if (value.length === 4) {
+        validateAndCreateWallet(value);
+      }
     }
-};
-
-const validateAndCreateWallet = async (confirmedPin: string) => {
-  if (pin !== confirmedPin) {
-    Alert.alert(
-      'PIN Mismatch',
-      'The PINs do not match. Please try again.',
-      [{ text: 'OK', onPress: () => resetPinCreation() }]
-    );
-    return;
-  }
-
-  try {
-    // Store PIN securely using Expo SecureStore
-    await SecureStore.setItemAsync('userPIN', pin);
-    
-    // Store PIN using AsyncStorage
-    await AsyncStorage.setItem(`userPin_${user?.id}`, pin);
-
-    // Navigate to home screen
-    router.push('/(tabs)/home');
-    
-  } catch (error) {
-    Alert.alert(
-      'Error',
-      'Failed to save PIN. Please try again.',
-      [{ text: 'OK', onPress: () => resetPinCreation() }]
-    );
-  }
-};
+  };
 
   const resetPinCreation = () => {
     setPin('');
     setConfirmPin('');
     setStep(1);
+  };
+
+  const validateAndCreateWallet = async (confirmedPin: string) => {
+    if (pin !== confirmedPin) {
+      Alert.alert(
+        'PIN Mismatch',
+        'The PINs do not match. Please try again.',
+        [{ text: 'OK', onPress: () => resetPinCreation() }]
+      );
+      return;
+    }
+
+    // Retrieve the user's name from Clerk; adjust property names as needed.
+    const name = user?.fullName ;
+
+    try {
+      // Post to the backend using Axios
+      const response = await axios.post(`${API_URL}/api/create`, { name, pin });
+      const data = response.data;
+
+      // Securely store the PIN
+      await SecureStore.setItemAsync('userPIN', pin);
+      await AsyncStorage.setItem(`userPin_${user?.id}`, pin);
+
+      // Navigate to the home screen 
+      router.push('/(tabs)/home');
+    } catch (error: any) {
+      // Axios automatically rejects for HTTP errors so we extract the message from error.response if available.
+      const errorMessage =
+        error.response?.data?.error ||
+        error.message ||
+        'Failed to create wallet. Please try again.';
+      Alert.alert(
+        'Error',
+        errorMessage,
+        [{ text: 'OK', onPress: () => resetPinCreation() }]
+      );
+    }
   };
 
   return (
@@ -129,7 +138,6 @@ const validateAndCreateWallet = async (confirmedPin: string) => {
           : 'Re-enter your PIN to confirm'
         }
       </Text>
-      
       <PinInput
         value={step === 1 ? pin : confirmPin}
         onChange={handlePinChange}

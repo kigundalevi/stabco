@@ -22,6 +22,7 @@ export default function WalletScreen() {
     usdc: 0,
     rate: 129 // Initial hardcoded rate
   });
+  const API_URL = 'https://hidden-eyrie-76070-9c205d882c7e.herokuapp.com';  
 
   const showModal = (type: 'pay' | 'add' | 'withdraw') => {
     setActiveModal(type);
@@ -50,8 +51,8 @@ export default function WalletScreen() {
       setError('');
       
       const [transactionsRes, balanceRes] = await Promise.all([
-        axios.get(`/api/wallet/transactions/${user?.firstName}`),
-        axios.get(`/api/wallet/usdc-balance/${user?.firstName}`)
+        axios.get(`${API_URL}/api/transactions/${user?.fullName}`),
+        axios.get(`${API_URL}/api/usdc-balance/${user?.fullName}`)
       ]);
 
       const transactions = transactionsRes.data.transactions;
@@ -105,6 +106,7 @@ export default function WalletScreen() {
         year: 'numeric'
       });
     };
+     
 
     const grouped = transactions.reduce((groups: { [key: string]: any[] }, transaction) => {
       const dateKey = formatDate(transaction.date);
@@ -136,7 +138,7 @@ export default function WalletScreen() {
   const handleTransactionSuccess = () => {
     fetchData();
   };
-
+  console.log(user?.firstName);
   return (
     <View style={styles.container}>
       {/* Header */}
