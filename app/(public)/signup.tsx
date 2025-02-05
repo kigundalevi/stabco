@@ -1,5 +1,5 @@
 // app/index.js
-import { View, Text, TouchableOpacity, StyleSheet} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Link } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
@@ -48,6 +48,7 @@ const google = React.useCallback(async () => {
     const { createdSessionId, signIn, signUp, setActive } = await startOAuthFlow({
       redirectUrl: Linking.createURL('/dashboard', { scheme: 'myapp' }),
     });
+    console.log('user created');
 
     if (createdSessionId) {
       setActive!({ session: createdSessionId });
@@ -70,9 +71,7 @@ const google = React.useCallback(async () => {
     <View style={styles.container}>
       {/* Logo Circle */}
       <View style={styles.logoContainer}>
-        <View style={styles.logoCircle}>
-          <View style={styles.innerCircle} />
-        </View>
+      <Image source={require('../assets/images/icon.png')} style = {styles.logoContainer}/>
       </View>
 
       {/* Title Text */}
@@ -126,12 +125,16 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   logoContainer: {
-    marginBottom: 30,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    
   },
   logoCircle: {
     width: 60,
     height: 60,
-    borderRadius: 30,
     backgroundColor: '#4169E1',
     justifyContent: 'center',
     alignItems: 'center',
@@ -148,8 +151,9 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 32,
     fontWeight: 'bold',
-    textAlign: 'center',
     marginVertical: 5,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   googleButton: {
     flexDirection: 'row',

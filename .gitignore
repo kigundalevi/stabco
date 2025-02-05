@@ -40,3 +40,4 @@ yarn-error.*
 
 # Ignore Gradle build output directory
 build
+.env
