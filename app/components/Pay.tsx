@@ -4,6 +4,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useUser } from '@clerk/clerk-expo';
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
+import { LinearGradient } from 'expo-linear-gradient';
 
 
 interface PinInputProps {
@@ -11,6 +12,9 @@ interface PinInputProps {
   onChange: (value: string) => void;
   maxLength?: number;
 }
+ interface Friend {
+  name: string;
+ }
 
 const PinInput = ({ value, onChange, maxLength = 4 }: PinInputProps) => {
   return (
@@ -57,6 +61,38 @@ const Pay: React.FC<PayProps> = ({ onClose, balance }) => {
   const [pin, setPin] = useState('');
   const { user } = useUser();
   const API_URL = 'https://hidden-eyrie-76070-9c205d882c7e.herokuapp.com';   // Replace with your API URL
+  const [searchQuery, setSearchQuery] = useState('');
+  const [friendResults, setFriendResults] = useState<Friend[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+
+  const searchFriends = async (query: string) => {
+    if (query.length < 2) {
+      setFriendResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const response = await axios.post(`${API_URL}/api/search`, { name: query });
+      
+      if (response.data.success) {
+        // Map to extract only names and filter out current user
+        const filteredResults = response.data.users
+          .filter((user: any) => user.name !== user?.fullName)
+          .map((user: any) => ({ name: user.name }));
+
+        setFriendResults(filteredResults);
+      } else {
+        Alert.alert('Search Error', 'Unable to search friends');
+      }
+    } catch (error) {
+      console.error('Friend search error:', error);
+      Alert.alert('Error', 'Failed to search friends');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
 
   const handlePinSubmit = async (submittedPin: string) => {
 
@@ -136,7 +172,7 @@ const Pay: React.FC<PayProps> = ({ onClose, balance }) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onClose}>
-        <Icon name="arrow-back" size={24} color="#FFFFFF" />
+          <Icon name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.title}>Send Money</Text>
         <View style={{ width: 24 }} />
@@ -144,23 +180,41 @@ const Pay: React.FC<PayProps> = ({ onClose, balance }) => {
 
       <TextInput
         style={styles.searchInput}
-        placeholder="Search friends"
+        placeholder="Search friends by username"
         placeholderTextColor="#888"
+        value={searchQuery}
+        onChangeText={(text) => {
+          setSearchQuery(text);
+          searchFriends(text);
+        }}
       />
 
+      {isSearching && (
+        <Text style={styles.searchStatus}>Searching...</Text>
+      )}
+
       <View style={styles.friendsList}>
-        <TouchableOpacity 
-          style={styles.friendItem}
-          onPress={() => {
-            setSelectedFriend('elvis');
-            setStep('amount');
-          }}
-        >
-          <View style={styles.friendAvatar}>
-            <Text style={styles.avatarText}>e</Text>
-          </View>
-          <Text style={styles.friendName}>elvis</Text>
-        </TouchableOpacity>
+        {friendResults.length > 0 ? (
+          friendResults.map((friend: Friend) => (
+            <TouchableOpacity 
+              key={friend.name}
+              style={styles.friendItem}
+              onPress={() => {
+                setSelectedFriend(friend.name);
+                setStep('amount');
+              }}
+            >
+              <View style={styles.friendAvatar}>
+                <Text style={styles.avatarText}>
+                  {friend.name.charAt(0).toLowerCase()}
+                </Text>
+              </View>
+              <Text style={styles.friendName}>{friend.name}</Text>
+            </TouchableOpacity>
+          ))
+        ) : searchQuery.length > 1 && !isSearching ? (
+          <Text style={styles.noResultsText}>No friends found</Text>
+        ) : null}
       </View>
     </View>
   );
@@ -304,6 +358,7 @@ const Pay: React.FC<PayProps> = ({ onClose, balance }) => {
 
   return (
     <View style={styles.modalContainer}>
+      <View style={styles.gradientOverlay} />
       {renderStep()}
     </View>
   );
@@ -312,9 +367,20 @@ const Pay: React.FC<PayProps> = ({ onClose, balance }) => {
 const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
-    backgroundColor: '#2A2A2A',
-    borderRadius: 25,
+    backgroundColor: '#000000',
+   borderTopRightRadius:25,
+   borderTopLeftRadius:25,
+    overflow: 'hidden',
    },
+   gradientOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#151414',
+    opacity: 0.8, // Adjust for desired gradient effect
+  },
   container: {
     flex: 1,
     padding: 20,
@@ -409,6 +475,16 @@ const styles = StyleSheet.create({
   },
   confirmationDetail: {
     marginBottom: 20,
+  },
+  searchStatus: {
+    color: '#888888',
+    textAlign: 'center',
+    marginVertical: 10,
+  },
+  noResultsText: {
+    color: '#888888',
+    textAlign: 'center',
+    marginVertical: 10,
   },
   confirmLabel: {
     color: '#888888',

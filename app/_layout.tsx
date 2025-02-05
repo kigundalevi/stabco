@@ -1,45 +1,88 @@
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useFonts } from 'expo-font';
+import { useEffect, useState } from 'react';
+import { BackHandler, ToastAndroid, Platform, ActivityIndicator, View } from 'react-native';
+import { ClerkProvider, ClerkLoaded, useAuth, useUser } from '@clerk/clerk-expo';
+import { Slot, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
-import 'react-native-reanimated';
-import { ClerkProvider, ClerkLoaded, SignedIn, useAuth, useUser } from '@clerk/clerk-expo';
-import { Slot, Redirect, Stack, Link, router } from 'expo-router';
-import { tokenCache } from '@/cache';
-import React from 'react';
-import { TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { useFonts } from 'expo-font';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 SplashScreen.preventAutoHideAsync();
 
-const InitialLayout = () => {
-  const { isSignedIn } = useAuth();
-  const { user } = useUser();
+// Define valid route segments type
+type RouteSegment = typeof PUBLIC_ROUTES[number] | typeof PROTECTED_ROUTES[number];
 
+const PUBLIC_ROUTES = ['(public)', 'signup'] as const;
+const PROTECTED_ROUTES = ['(authenticated)', 'pincreation'] as const;
+
+const InitialLayout = () => {
+  const { isLoaded, isSignedIn } = useAuth();
+  const { user } = useUser();
+  const segments = useSegments<RouteSegment[]>();
+  const router = useRouter();
+  const [exitApp, setExitApp] = useState(false);
+
+  // Handle Android back button
   useEffect(() => {
-    const checkUserPin = async () => {
-      if (isSignedIn && user) {
+    const backAction = () => {
+      const inAuthGroup = segments[0] === '(authenticated)';
+      
+      if (inAuthGroup) {
+        if (exitApp) {
+          BackHandler.exitApp();
+          return false;
+        }
+        if (Platform.OS === 'android') {
+          ToastAndroid.show('Press back again to exit', ToastAndroid.SHORT);
+        }
+        setExitApp(true);
+        setTimeout(() => setExitApp(false), 2000);
+        return true;
+      }
+      return false;
+    };
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+    return () => backHandler.remove();
+  }, [exitApp, segments]);
+     
+ 
+  // Auth state management combined with PIN check:
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    // Determine if we are in the authenticated group
+    const inAuthGroup = segments[0] === '(authenticated)';
+
+    if (isSignedIn && user) {
+      // Check for a stored PIN
+      const checkUserPin = async () => {
         try {
           const hasPin = await AsyncStorage.getItem(`userPin_${user.id}`);
           if (hasPin) {
-            router.push('/(tabs)/home');
+            // If a PIN exists and we are not already in the authenticated group, push to home.
+            if (!inAuthGroup) {
+              router.replace('./(authenticated)/(tabs)/home');
+            }
           } else {
-            router.push('/pincreation');
+            // No PIN found – push to pincreation.
+            router.replace('/pincreation');
           }
         } catch (error) {
           console.error('Error checking PIN:', error);
         }
-      }
-    };
-    checkUserPin();
-  }, [isSignedIn, user]);
+      };
+      checkUserPin();
+    } else if (!isSignedIn && segments[0] !== '(public)') {
+      router.replace('./(public)/signup');
+    }
+  }, [isLoaded, isSignedIn, user, segments, router]);
 
-  if (!isSignedIn) {
+  if (!isLoaded) {
     return (
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="signup" />
-      </Stack>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#fff" />
+      </View>
     );
   }
 
@@ -62,17 +105,10 @@ const RootLayout = () => {
     }
   }, [fontsLoaded]);
 
-  if (!fontsLoaded) {
-    return null;
-  }
-
-  const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
-  if (!publishableKey) {
-    throw new Error('Missing EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY');
-  }
+  if (!fontsLoaded) return null;
 
   return (
-    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+    <ClerkProvider publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!}>
       <ClerkLoaded>
         <InitialLayout />
       </ClerkLoaded>

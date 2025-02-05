@@ -56,7 +56,7 @@ const google = React.useCallback(async () => {
       const hasPinCreated = await checkPinCreated(createdSessionId);
       
       if (hasPinCreated) {
-        router.push('/(tabs)/home');
+        router.push('./(tabs)/home');
       } else {
         router.push('/pincreation');
       }
@@ -76,9 +76,9 @@ const google = React.useCallback(async () => {
       </View>
 
       {/* Title Text */}
-      <Text style={styles.titleText}>FAST </Text>
-      <Text style={styles.titleText}>FREE</Text>
-      <Text style={styles.titleText}>SECURE</Text>
+      <Text style={styles.titleText}>LOW </Text>
+      <Text style={styles.titleText}>TRANSACTION RATES</Text>
+      <Text style={styles.titleText}>FOR ALL</Text>
 
       {/* Google Sign In Button */}
       <TouchableOpacity
@@ -177,6 +177,8 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 300,
     alignItems: 'center',
+    backgroundColor:'#223F5738',
+    borderRadius:25
   },
   otherOptionsText: {
     color: '#4169E1',

@@ -113,7 +113,7 @@ const pincreation = () => {
       
 
       // Navigate to the home screen 
-      router.push('/(tabs)/home');
+      router.push('./(authenticated)/(tabs)/home');
     } catch (error: any) {
       // Axios automatically rejects for HTTP errors so we extract the message from error.response if available.
       const errorMessage =

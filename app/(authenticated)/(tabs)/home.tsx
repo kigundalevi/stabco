@@ -3,10 +3,11 @@ import { useRouter } from 'expo-router';
 import { useAuth, useUser } from '@clerk/clerk-expo';
 import React, { useState, useEffect, useRef } from 'react';
 import { Feather, Ionicons } from '@expo/vector-icons';
-import Pay from '../components/Pay';
-import Withdraw from '../components/Withdraw';
-import AddMoney from '../components/AddMoney';
+import Pay from '../../components/Pay';
+import Withdraw from '../../components/Withdraw';
+import AddMoney from '../../components/AddMoney';
 import axios from 'axios';
+import { BackHandler } from 'react-native';
 
 export default function WalletScreen() {
   const router = useRouter();
@@ -23,6 +24,21 @@ export default function WalletScreen() {
     rate: 129 // Initial hardcoded rate
   });
   const API_URL = 'https://hidden-eyrie-76070-9c205d882c7e.herokuapp.com';  
+
+  
+  useEffect(() => {
+    const backAction = () => {
+      BackHandler.exitApp();
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction
+    );
+
+    return () => backHandler.remove();
+  }, []);
 
   const showModal = (type: 'pay' | 'add' | 'withdraw') => {
     setActiveModal(type);
@@ -138,7 +154,7 @@ export default function WalletScreen() {
   const handleTransactionSuccess = () => {
     fetchData();
   };
-  console.log(user?.firstName);
+  
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -163,7 +179,7 @@ export default function WalletScreen() {
               KES {balances.kes.toLocaleString('en-KE', { maximumFractionDigits: 2 })}
             </Text>
             <Text style={styles.subBalance}>
-              {balances.usdc.toFixed(2)} USDC (1 USDC = KES {balances.rate.toFixed(2)})
+              {balances.usdc.toFixed(2)} USDC
             </Text>
           </View>
         </View>
@@ -246,7 +262,7 @@ export default function WalletScreen() {
                     styles.transactionAmount,
                     { color: transaction.type === 'sent' ? '#FF3D00' : '#00C853' }
                   ]}>
-                    {transaction.type === 'sent' ? '-' : '+'}
+                    {/* {transaction.type === 'sent' ? '-' : '+'} */}
                     {transaction.currency === 'KES' ? 'KES' : '$'}
                     {transaction.amount.toLocaleString('en-KE')}
                   </Text>
@@ -363,6 +379,7 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 24,
     fontWeight: '600',
+    // fontFamily:'Inter'
   },
   subBalance: {
     color: '#888',
@@ -386,7 +403,7 @@ const styles = StyleSheet.create({
   actionButtons: {
     flexDirection: 'row',
     paddingHorizontal: 16,
-    gap: 12,
+    gap: 8,
     marginBottom: 20,
     marginTop: 10,
   },
@@ -394,13 +411,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#1E1E1E',
-    padding: 10,
+    padding: 8,
     borderRadius: 25,
-    marginRight: 12,
+    marginRight: 10,
   },
   actionButtonText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '500',
   },
   transactionsList: {
@@ -412,8 +429,9 @@ const styles = StyleSheet.create({
   },
   dateHeader: {
     color: '#888',
-    fontSize: 14,
+    fontSize: 18,
     paddingHorizontal: 16,
+    fontWeight:800,
     paddingVertical: 8,
   },
   transaction: {
