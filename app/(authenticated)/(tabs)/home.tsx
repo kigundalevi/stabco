@@ -193,7 +193,7 @@ export default function WalletScreen() {
           </View>
         </View>
         <View style={styles.headerIcons}>
-          <TouchableOpacity style={styles.adduserIcon}>
+          <TouchableOpacity style={styles.adduserIcon} >
             <Feather name="user-plus" size={24} color="white" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.searchIcon}>

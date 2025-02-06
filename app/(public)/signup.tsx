@@ -9,7 +9,6 @@ import { useOAuth } from '@clerk/clerk-expo';
 import * as Linking from 'expo-linking';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
- 
 
 export const useWarmUpBrowser = () => {
   useEffect(() => {
@@ -72,6 +71,7 @@ const google = React.useCallback(async () => {
       {/* Logo Circle */}
       <View style={styles.logoContainer}>
       <Image source={require('../../assets/images/ICON.png')} style = {styles.logoContainer}/>
+      <Image source={require('../../assets/images/icon.png')} style = {styles.logoContainer}/>
       </View>
 
       {/* Title Text */}
@@ -97,17 +97,17 @@ const google = React.useCallback(async () => {
       {/* Privacy Policy and Terms */}
       <View style={styles.policyContainer}>
         <Text style={styles.policyText}>Read our </Text>
-        <Link href="/privacy" style={styles.linkText} >
+        <Link href="./privacy" style={styles.linkText} >
           Privacy Policy
         </Link>
         <Text style={styles.policyText}> & </Text>
-        <Link href="/biometric-privacy" style={styles.linkText}>
+        <Link href="./biometric-privacy" style={styles.linkText}>
           Biometric Privacy Notice
         </Link>
       </View>
       <View style={styles.termsContainer}>
         <Text style={styles.policyText}>Continue to accept the </Text>
-        <Link href="/terms" style={styles.linkText}>
+        <Link href="./terms" style={styles.linkText}>
           Terms of service
         </Link>
         <Text style={styles.policyText}>.</Text>
@@ -130,14 +130,16 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom  : 20,
     
   },
   logoCircle: {
     width: 60,
-    height: 60,
+    height: 60,   
     backgroundColor: '#4169E1',
     justifyContent: 'center',
     alignItems: 'center',
+    borderRadius: 30,
   },
   innerCircle: {
     width: 30,
