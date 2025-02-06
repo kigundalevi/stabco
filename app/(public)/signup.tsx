@@ -71,7 +71,6 @@ const google = React.useCallback(async () => {
       {/* Logo Circle */}
       <View style={styles.logoContainer}>
       <Image source={require('../../assets/images/ICON.png')} style = {styles.logoContainer}/>
-      <Image source={require('../../assets/images/icon.png')} style = {styles.logoContainer}/>
       </View>
 
       {/* Title Text */}
