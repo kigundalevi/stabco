@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, TextInput, Image, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, TextInput, Image, Alert, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useUser } from '@clerk/clerk-expo';
 import axios from 'axios';
@@ -48,13 +48,14 @@ type PayProps = {
     balance: number;
   
     onSuccess: (amount: number) => void;
-  
+
+     
   };
   
 
   type PaymentStep = 'select' | 'amount' | 'confirm' | 'pin' | 'success';
 
-const Pay: React.FC<PayProps> = ({ onClose, balance }) => {
+const Pay: React.FC<PayProps> = ({ onClose, balance, onSuccess }) => {
   const [amount, setAmount] = useState('');
   const [selectedFriend, setSelectedFriend] = useState<string | null>(null);
   const [step, setStep] = useState<PaymentStep>('select');
@@ -64,6 +65,7 @@ const Pay: React.FC<PayProps> = ({ onClose, balance }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [friendResults, setFriendResults] = useState<Friend[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const searchFriends = async (query: string) => {
     if (query.length < 2) {
@@ -95,8 +97,10 @@ const Pay: React.FC<PayProps> = ({ onClose, balance }) => {
 
 
   const handlePinSubmit = async (submittedPin: string) => {
+    setIsLoading(true);
 
     if (!/^\d{4}$/.test(submittedPin)) {
+      setIsLoading(false);
       Alert.alert('Invalid PIN', 'Your PIN must be exactly 4 digits.');
       return;
     }
@@ -108,22 +112,11 @@ const Pay: React.FC<PayProps> = ({ onClose, balance }) => {
     const storedPin = await SecureStore.getItemAsync('userPIN');
 
     if (submittedPin !== storedPin) {
+      setIsLoading(false);
       Alert.alert('Invalid PIN', 'The PIN you entered is incorrect');
       return;
     }
-
-         console.log('FINAL PIN FOR SUBMISSION:', submittedPin);
-  console.log('FINAL PIN LENGTH:', submittedPin.length);
-
-    // Detailed logging of the payload
-    console.log('Sending payload:', {
-      senderName: user?.fullName,
-      pin: pin, // Be careful not to log actual PINs in production
-      recipientName: selectedFriend,
-      amount: usdcAmount
-    });
-     
-    const payload = {
+     const payload = {
       senderName: user?.fullName,
       pin: submittedPin,
       recipientName: selectedFriend,
@@ -137,6 +130,7 @@ const Pay: React.FC<PayProps> = ({ onClose, balance }) => {
       });
   
       if (response.data.success) {
+        onSuccess(usdcAmount); // Call parent handler with amount
         setStep('success');
         setTimeout(() => {
           onClose();
@@ -165,6 +159,8 @@ const Pay: React.FC<PayProps> = ({ onClose, balance }) => {
         Alert.alert('Error', 'An unexpected error occurred. Please try again.');
       }
       setPin('');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -206,7 +202,8 @@ const Pay: React.FC<PayProps> = ({ onClose, balance }) => {
             >
               <View style={styles.friendAvatar}>
                 <Text style={styles.avatarText}>
-                  {friend.name.charAt(0).toLowerCase()}
+                  {friend.name.split(' ')[0]?.charAt(0).toUpperCase()+ friend.name.split(' ')[1]?.charAt(0).toUpperCase() }
+               
                 </Text>
               </View>
               <Text style={styles.friendName}>{friend.name}</Text>
@@ -259,6 +256,14 @@ const Pay: React.FC<PayProps> = ({ onClose, balance }) => {
      
   const renderPinVerification = () => (
     <View style={styles.container}>
+      {isLoading && (
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loaderContainer}>
+            <ActivityIndicator size="large" color="#FFFFFF" />
+            <Text style={styles.loaderText}>Processing...</Text>
+          </View>
+        </View>
+      )}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => setStep('confirm')}>
           <Icon name="arrow-back" size={24} color="#FFFFFF" />
@@ -278,13 +283,10 @@ const Pay: React.FC<PayProps> = ({ onClose, balance }) => {
                 console.log('RAW INPUT:', value);
                 // Remove any non-numeric characters
                 const newPin = value.replace(/[^0-9]/g, '');
-                console.log('PROCESSED PIN:', newPin);
-                console.log('PROCESSED PIN LENGTH:', newPin.length);
                 setPin(newPin);
                 // When exactly 4 digits are entered, immediately submit.
                 if (newPin.length === 4) {
-                  console.log('ATTEMPTING SUBMIT WITH:', newPin);
-                  handlePinSubmit(newPin);
+                handlePinSubmit(newPin);
                 }
               }}
             />
@@ -578,6 +580,27 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
   },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.7)', // Increased opacity for darker background
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000
+  },
+  loaderContainer: {
+    padding: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.1)', // Semi-transparent white container
+    alignItems: 'center'
+  },
+  loaderText: {
+    color: '#FFFFFF',
+    marginTop: 10
+  }
 });
 
 export default Pay;

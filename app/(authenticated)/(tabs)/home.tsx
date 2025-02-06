@@ -123,8 +123,8 @@ export default function WalletScreen() {
         year: 'numeric'
       });
     };
-     
-
+  
+    // First, group transactions by date
     const grouped = transactions.reduce((groups: { [key: string]: any[] }, transaction) => {
       const dateKey = formatDate(transaction.date);
       if (!groups[dateKey]) {
@@ -133,7 +133,15 @@ export default function WalletScreen() {
       groups[dateKey].push(transaction);
       return groups;
     }, {});
-
+  
+    // Sort transactions within each group by time (newest first)
+    Object.keys(grouped).forEach(dateKey => {
+      grouped[dateKey].sort((a, b) => {
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      });
+    });
+  
+    // Sort the date groups (keeping Today first, then most recent dates)
     return Object.keys(grouped)
       .sort((a, b) => {
         if (a === 'Today') return -1;

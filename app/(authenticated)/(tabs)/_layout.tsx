@@ -19,6 +19,7 @@ export default function AuthenticatedLayout() {
       }} />
       <Stack.Screen name="profile" options={{
         title: '',
+        headerShown:false
         
       }} />
     </Stack>

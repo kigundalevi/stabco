@@ -4,21 +4,15 @@ import { ClerkProvider, ClerkLoaded, useAuth, useUser } from '@clerk/clerk-expo'
 import { Slot, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { FontAwesome } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 SplashScreen.preventAutoHideAsync();
 
-// Define valid route segments type
-type RouteSegment = typeof PUBLIC_ROUTES[number] | typeof PROTECTED_ROUTES[number];
-
-const PUBLIC_ROUTES = ['(public)', 'signup'] as const;
-const PROTECTED_ROUTES = ['(authenticated)', 'pincreation'] as const;
-
 const InitialLayout = () => {
   const { isLoaded, isSignedIn } = useAuth();
   const { user } = useUser();
-  const segments = useSegments<RouteSegment[]>();
+  const segments = useSegments();
   const router = useRouter();
   const [exitApp, setExitApp] = useState(false);
 
@@ -46,7 +40,6 @@ const InitialLayout = () => {
     return () => backHandler.remove();
   }, [exitApp, segments]);
      
- 
   // Auth state management combined with PIN check:
   useEffect(() => {
     if (!isLoaded) return;
@@ -62,7 +55,7 @@ const InitialLayout = () => {
           if (hasPin) {
             // If a PIN exists and we are not already in the authenticated group, push to home.
             if (!inAuthGroup) {
-              router.replace('./(authenticated)/(tabs)/home');
+              router.replace('/(authenticated)/(tabs)/home');
             }
           } else {
             // No PIN found – push to pincreation.
@@ -74,14 +67,14 @@ const InitialLayout = () => {
       };
       checkUserPin();
     } else if (!isSignedIn && segments[0] !== '(public)') {
-      router.replace('./(public)/signup');
+      router.replace('/(public)/signup');
     }
   }, [isLoaded, isSignedIn, user, segments, router]);
 
   if (!isLoaded) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#fff" />
+        <ActivityIndicator size="large" color="blue" />
       </View>
     );
   }

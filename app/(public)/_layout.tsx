@@ -7,6 +7,7 @@ export default function PublicLayout() {
   if (isSignedIn) {
     return <Redirect href="./(authenticated)/(tabs)/home" />;
   }
+  
 
   return (
     <Stack screenOptions={{ headerShown: false }}>

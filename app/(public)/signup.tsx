@@ -57,7 +57,7 @@ const google = React.useCallback(async () => {
       const hasPinCreated = await checkPinCreated(createdSessionId);
       
       if (hasPinCreated) {
-        router.push('./(tabs)/home');
+        router.push('./(authenticated)/(tabs)/home');
       } else {
         router.push('/pincreation');
       }
@@ -71,7 +71,7 @@ const google = React.useCallback(async () => {
     <View style={styles.container}>
       {/* Logo Circle */}
       <View style={styles.logoContainer}>
-      <Image source={require('../assets/images/icon.png')} style = {styles.logoContainer}/>
+      <Image source={require('../../assets/images/ICON.png')} style = {styles.logoContainer}/>
       </View>
 
       {/* Title Text */}
