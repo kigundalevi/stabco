@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, Alert, StyleSheet, TextInput, Keyboard, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, Alert, StyleSheet, TextInput, Keyboard, TouchableWithoutFeedback, ActivityIndicator } from 'react-native';
 import { useUser } from '@clerk/clerk-expo';
 import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
@@ -64,6 +64,7 @@ const PinInput = ({ value, onChange, maxLength = 4 }: { value: string; onChange:
 const pincreation = () => {
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState(1); // Step 1: Create PIN, Step 2: Confirm PIN
   const { user } = useUser();
   const navigation = useNavigation();
@@ -98,37 +99,64 @@ const pincreation = () => {
       );
       return;
     }
-
-    // Retrieve the user's name from Clerk; adjust property names as needed.
-    const name = user?.fullName ;
-
-    try {
-      // Post to the backend using Axios
-      const response = await axios.post(`${API_URL}/api/create`, { name, pin });
-      const data = response.data;
-
-      // Securely store the PIN
-      await SecureStore.setItemAsync('userPIN', pin);
-      await AsyncStorage.setItem(`userPin_${user?.id}`, pin);
+  
+    // Retrieve the user's name and stored phone number
+    const name = user?.fullName;
+    const phoneNumber = await AsyncStorage.getItem(`userPhone_${user?.id}`);
       
+    if (!phoneNumber) {
+      Alert.alert('Error', 'Phone number not found. Please try again.');
+      router.replace('/phoneNo'); // Use replace instead of push
+      return;
+    }
+  
+    try {
+      setIsLoading(true);
+      const response = await axios.post(`${API_URL}/api/create`, { 
+        name, 
+        pin,
+        phoneNumber
+      });
 
-      // Navigate to the home screen 
-      router.push('./(authenticated)/(tabs)/home');
+       
+      // Only proceed if the API call was successful
+      if (response.data.success) {
+        // Securely store the PIN
+        await SecureStore.setItemAsync('userPIN', pin);
+        await AsyncStorage.setItem(`userPin_${user?.id}`, pin);
+        
+         
+        // Navigate to the home screen
+        router.replace('./(authenticated)/(tabs)/home');
+      }
     } catch (error: any) {
-      // Axios automatically rejects for HTTP errors so we extract the message from error.response if available.
       const errorMessage =
         error.response?.data?.error ||
         error.message ||
         'Failed to create wallet. Please try again.';
+      
       Alert.alert(
         'Error',
         errorMessage,
-        [{ text: 'OK', onPress: () => resetPinCreation() }]
+        [{ 
+          text: 'OK', 
+          onPress: () => {
+            resetPinCreation();
+            router.replace('/phoneNo');
+          }
+        }]
       );
+    } finally {
+      setIsLoading(false);
     }
   };
-
   return (
+    <View style={styles.container}>
+    {isLoading && (
+      <View style={styles.loadingOverlay}>
+        <ActivityIndicator size="large" color="#000" />
+      </View>
+    )}
     <View style={styles.container}>
       <Text style={styles.title}>
         {step === 1 ? 'Create Your PIN' : 'Confirm Your PIN'}
@@ -143,6 +171,7 @@ const pincreation = () => {
         value={step === 1 ? pin : confirmPin}
         onChange={handlePinChange}
       />
+    </View>
     </View>
   );
 };
@@ -189,6 +218,21 @@ const styles = StyleSheet.create({
     height: 1,
     opacity: 0,
   },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255,255,255,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
 });
 
 export default pincreation;
+
+function setIsLoading(arg0: boolean) {
+  throw new Error('Function not implemented.');
+}

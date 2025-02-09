@@ -27,6 +27,7 @@
         <data android:scheme="myapp"/>
         <data android:scheme="com.anonymous.fintech"/>
         <data android:scheme="exp+fintech"/>
+        <data android:scheme="exp+stab"/>
       </intent-filter>
     </activity>
   </application>

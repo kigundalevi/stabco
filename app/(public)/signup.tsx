@@ -9,6 +9,7 @@ import { useOAuth } from '@clerk/clerk-expo';
 import * as Linking from 'expo-linking';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
+ 
 
 export const useWarmUpBrowser = () => {
   useEffect(() => {
@@ -58,7 +59,7 @@ const google = React.useCallback(async () => {
       if (hasPinCreated) {
         router.push('./(authenticated)/(tabs)/home');
       } else {
-        router.push('/pincreation');
+        router.push('/phoneNo');
       }
     }
   } catch (err) {
@@ -129,16 +130,14 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom  : 20,
     
   },
   logoCircle: {
     width: 60,
-    height: 60,   
+    height: 60,
     backgroundColor: '#4169E1',
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 30,
   },
   innerCircle: {
     width: 30,

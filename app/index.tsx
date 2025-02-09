@@ -1,12 +1,15 @@
-import { View, Text, Image, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
-import React, { useEffect } from 'react';
-import { Link, router } from 'expo-router';
+import { View, Text, Image, StyleSheet, Dimensions, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { router } from 'expo-router';
 import Onboarding from 'react-native-onboarding-swiper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
 
-const index = () => {
+const Index = () => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [shouldShowOnboarding, setShouldShowOnboarding] = useState(false);
+
   useEffect(() => {
     checkIfAlreadyOnboarded();
   }, []);
@@ -17,18 +20,24 @@ const index = () => {
       
       if (value !== null && value === 'true') {
         // User has already onboarded, redirect to signup
-        router.push('/signup');
+        router.replace('/signup');
+      } else {
+        // User hasn't onboarded, show onboarding screens
+        setShouldShowOnboarding(true);
       }
     } catch (error) {
       console.log('Error checking onboarding status:', error);
+      // If there's an error, show onboarding as fallback
+      setShouldShowOnboarding(true);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleDone = async () => {
     try {
-      // Set the flag indicating user has completed onboarding
       await AsyncStorage.setItem('hasOnboarded', 'true');
-      router.push('/signup');
+      router.replace('/signup');
     } catch (error) {
       console.log('Error saving onboarding status:', error);
     }
@@ -36,13 +45,24 @@ const index = () => {
 
   const handleSkip = async () => {
     try {
-      // Even if user skips, we still mark them as onboarded
       await AsyncStorage.setItem('hasOnboarded', 'true');
-      router.push('/signup');
+      router.replace('/signup');
     } catch (error) {
       console.log('Error saving onboarding status:', error);
     }
   };
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#7C4DFF" />
+      </View>
+    );
+  }
+
+  if (!shouldShowOnboarding) {
+    return null;
+  }
 
   return (
     <View style={styles.container}>
@@ -63,7 +83,7 @@ const index = () => {
               </View>
             ),
             title: 'Instant',
-            subtitle: 'Send and revieve money instantly with zero fees',
+            subtitle: 'Send and receive money instantly with zero fees',
           },
           {
             backgroundColor: '#C5C8FF',
@@ -76,7 +96,7 @@ const index = () => {
               </View>
             ),
             title: 'Secure',
-            subtitle: 'secure your accouunt with a personalized pin and wallet system',
+            subtitle: 'Secure your account with a personalized pin and wallet system',
           },
           {
             backgroundColor: '#385A64',
@@ -101,18 +121,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'white',
+  },
   lottie: {
     width: width * 0.9,
     resizeMode: 'contain',
     height: width,
   },
-  donebtn: {
-    color: 'white',
-    padding: 20,
-    backgroundColor: 'white',
-    borderTopLeftRadius: '100%',
-    borderBottomLeftRadius: '100%',
-  },
 });
 
-export default index;
+export default Index;

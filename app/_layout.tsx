@@ -41,35 +41,43 @@ const InitialLayout = () => {
   }, [exitApp, segments]);
      
   // Auth state management combined with PIN check:
-  useEffect(() => {
-    if (!isLoaded) return;
+  // Modify your useEffect for auth state management
+useEffect(() => {
+  if (!isLoaded) return;
 
-    // Determine if we are in the authenticated group
-    const inAuthGroup = segments[0] === '(authenticated)';
+  const inAuthGroup = segments[0] === '(authenticated)';
 
+  const checkAuthState = async () => {
     if (isSignedIn && user) {
-      // Check for a stored PIN
-      const checkUserPin = async () => {
-        try {
-          const hasPin = await AsyncStorage.getItem(`userPin_${user.id}`);
-          if (hasPin) {
-            // If a PIN exists and we are not already in the authenticated group, push to home.
-            if (!inAuthGroup) {
-              router.replace('/(authenticated)/(tabs)/home');
-            }
-          } else {
-            // No PIN found – push to pincreation.
-            router.replace('/pincreation');
+      try {
+        const hasPin = await AsyncStorage.getItem(`userPin_${user.id}`);
+        const currentRoute = segments[0];
+        
+        // Allow navigation to pincreation if it's the current route
+        if (currentRoute === 'pincreation') return;
+
+        if (hasPin) {
+          if (!inAuthGroup) {
+            router.replace('/(authenticated)/(tabs)/home');
           }
-        } catch (error) {
-          console.error('Error checking PIN:', error);
+        } else {
+          // Only navigate to phoneNo if not already there
+          if (currentRoute !== 'phoneNo') {
+            router.replace('/phoneNo');
+          }
         }
-      };
-      checkUserPin();
-    } else if (!isSignedIn && segments[0] !== '(public)') {
-      router.replace('/(public)/signup');
+      } catch (error) {
+        console.error('Error checking PIN:', error);
+      }
+    } else if (!isSignedIn) {
+      if (segments[0] !== '(public)') {
+        router.replace('/(public)/signup');
+      }
     }
-  }, [isLoaded, isSignedIn, user, segments, router]);
+  };
+
+  checkAuthState();
+}, [isLoaded, isSignedIn, user, segments, router]);
 
   if (!isLoaded) {
     return (
