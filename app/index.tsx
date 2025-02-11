@@ -12,7 +12,7 @@ const Index = () => {
 
   useEffect(() => {
     checkIfAlreadyOnboarded();
-  }, []);
+  }, [isLoading]);
 
   const checkIfAlreadyOnboarded = async () => {
     try {

@@ -6,6 +6,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
 import { FontAwesome } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { tokenCache } from '@/cache';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -109,7 +110,7 @@ const RootLayout = () => {
   if (!fontsLoaded) return null;
 
   return (
-    <ClerkProvider publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!}>
+    <ClerkProvider publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!} tokenCache={tokenCache}>
       <ClerkLoaded>
         <InitialLayout />
       </ClerkLoaded>
