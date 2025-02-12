@@ -53,13 +53,13 @@ useEffect(() => {
     if (isSignedIn && user) {
       try {
         const hasPin = await AsyncStorage.getItem(`userPin_${user.id}`);
-        const currentRoute = segments[0];
+        const currentRoute = segments[0] as string;
         
         // If user has a PIN set
         if (hasPin) {
           // User is in auth group but needs to verify PIN first
           if (!inAuthGroup && currentRoute !== 'pinverification') {
-            router.replace('/pinverification');
+            router.replace('./pinverification');
             return;
           }
           
