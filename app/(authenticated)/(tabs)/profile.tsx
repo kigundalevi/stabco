@@ -33,7 +33,6 @@ const ProfileScreen = () => {
           <MaterialIcons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
 
-        {/* Profile Section */}
         <View style={styles.profileSection}>
           {user?.imageUrl ? (
             <Image source={{ uri: user.imageUrl }} style={styles.profileImage} />
@@ -42,17 +41,10 @@ const ProfileScreen = () => {
               <Text style={styles.initialText}>{user?.firstName?.[0] || 'U'}</Text>
             </View>
           )}
-          
-          {/* Display Username */}
-            {(user?.firstName || user?.primaryEmailAddress?.emailAddress) && (
-              <Text style={styles.usernameText}>@
-                {user.firstName || user.primaryEmailAddress?.emailAddress}
-              </Text>
-          )}
         </View>
 
         <View style={styles.menuContainer}>
-          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/invitePeople')}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('./(tabs)/invite-people')}>
             <Ionicons name="mail-outline" size={24} color="white" />
             <Text style={styles.menuText}>Invite friends</Text>
           </TouchableOpacity>
@@ -67,13 +59,8 @@ const ProfileScreen = () => {
             <Ionicons name="person-outline" size={24} color="white" />
             <Text style={styles.menuText}>Personal details</Text>
           </TouchableOpacity>
-{/* 
-          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/directory')}>
-            <MaterialCommunityIcons name="folder-outline" size={24} color="white" />
-            <Text style={styles.menuText}>Directory</Text>
-          </TouchableOpacity> */}
 
-          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/paymentMethod')}>
+                   <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/paymentMethod')}>
             <MaterialCommunityIcons name="credit-card-outline" size={24} color="white" />
             <Text style={styles.menuText}>Payment Method</Text>
           </TouchableOpacity>
@@ -98,10 +85,10 @@ const ProfileScreen = () => {
             <Text style={styles.menuText}>Support</Text>
           </TouchableOpacity>
 
-          {/* <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/')}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/')}>
             <MaterialIcons name="menu" size={24} color="white" />
             <Text style={styles.menuText}>More</Text>
-          </TouchableOpacity> */}
+          </TouchableOpacity>
 
           <TouchableOpacity style={styles.logoutButton} onPress={handleSignOut}>
             <MaterialIcons name="logout" size={24} color="#FF4444" />
@@ -120,11 +107,10 @@ const styles = StyleSheet.create({
   profileImage: { width: 80, height: 80, borderRadius: 40 },
   profileInitial: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#8A2BE2', justifyContent: 'center', alignItems: 'center' },
   initialText: { color: 'white', fontSize: 24, fontWeight: 'bold' },
-  usernameText: { color: 'grey', fontSize: 14,marginTop: 8, fontWeight: '400' }, // Added margin for spacing
   menuContainer: { paddingHorizontal: 16, paddingTop: 20 },
   menuItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#333333' },
   menuText: { color: 'white', fontSize: 16, marginLeft: 16 },
-  menuSubtext: { color: '#808080', fontSize: 14, marginLeft: 16, position: 'absolute', right:16},
+  menuSubtext: { color: '#808080', fontSize: 14, marginLeft: 16 },
   logoutButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, marginTop: 16 },
   logoutText: { color: '#FF4444', fontSize: 16, marginLeft: 16 },
 });

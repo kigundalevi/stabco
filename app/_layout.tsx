@@ -58,13 +58,13 @@ useEffect(() => {
         // If user has a PIN set
         if (hasPin) {
           // User is in auth group but needs to verify PIN first
-          if (!inAuthGroup && currentRoute !== 'PinVerification') {
-            router.replace('/PinVerification');
+          if (!inAuthGroup && currentRoute !== 'pinverification') {
+            router.replace('/pinverification');
             return;
           }
           
           // User has verified PIN and can access authenticated routes
-          if (inAuthGroup && currentRoute === 'PinVerification') {
+          if (inAuthGroup && currentRoute === 'pinverification') {
             router.replace('/(authenticated)/(tabs)/home');
             return;
           }
