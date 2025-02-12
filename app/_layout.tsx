@@ -43,6 +43,7 @@ const InitialLayout = () => {
      
   // Auth state management combined with PIN check:
   // Modify your useEffect for auth state management
+// Modify your useEffect for auth state management
 useEffect(() => {
   if (!isLoaded) return;
 
@@ -54,26 +55,46 @@ useEffect(() => {
         const hasPin = await AsyncStorage.getItem(`userPin_${user.id}`);
         const currentRoute = segments[0];
         
-        // Allow navigation to pincreation if it's the current route
-        if (currentRoute === 'pincreation') return;
-
+        // If user has a PIN set
         if (hasPin) {
-          if (!inAuthGroup) {
+          // User is in auth group but needs to verify PIN first
+          if (!inAuthGroup && currentRoute !== 'PinVerification') {
+            router.replace('/PinVerification');
+            return;
+          }
+          
+          // User has verified PIN and can access authenticated routes
+          if (inAuthGroup && currentRoute === 'PinVerification') {
             router.replace('/(authenticated)/(tabs)/home');
+            return;
           }
         } else {
-          // Only navigate to phoneNo if not already there
-          if (currentRoute !== 'phoneNo') {
-            router.replace('/phoneNo');
+          // No PIN set - handle PIN creation flow
+          
+          // Allow user to stay on PIN creation screen if they're there
+          if (currentRoute === 'pincreation') {
+            return;
+          }
+          
+          // Check if phone number exists
+          const hasPhone = await AsyncStorage.getItem(`userPhone_${user.id}`);
+          
+          if (!hasPhone) {
+            // No phone number - send to phone number input
+            if (currentRoute !== 'phoneNo') {
+              router.replace('/phoneNo');
+            }
+          } else {
+            // Has phone but no PIN - send to PIN creation
+            router.replace('/pincreation');
           }
         }
       } catch (error) {
         console.error('Error checking PIN:', error);
       }
     } else if (!isSignedIn) {
-      if (segments[0] !== '(public)') {
-        router.replace('/(public)/signup');
-      }
+      // Not signed in - send to signup
+      router.replace('/signup');
     }
   };
 
