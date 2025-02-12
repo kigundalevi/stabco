@@ -1,20 +1,16 @@
-// app/index.js
-import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native';
 import { Link } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from "expo-web-browser";
 import React from 'react';
-import { useOAuth } from '@clerk/clerk-expo';
+import { useOAuth, useUser } from '@clerk/clerk-expo';
 import * as Linking from 'expo-linking';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
- 
 
 export const useWarmUpBrowser = () => {
   useEffect(() => {
-    // Warm up the android browser to improve UX
-    // https://docs.expo.dev/guides/authentication/#improving-user-experience
     void WebBrowser.warmUpAsync();
     return () => {
       void WebBrowser.coolDownAsync();
@@ -24,62 +20,84 @@ export const useWarmUpBrowser = () => {
 
 WebBrowser.maybeCompleteAuthSession();
 
-
 export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
+  const { user } = useUser();
 
+  useWarmUpBrowser();
+  const { startOAuthFlow } = useOAuth({ strategy: 'oauth_google' });
 
-useWarmUpBrowser()
-
-const { startOAuthFlow } = useOAuth({ strategy: 'oauth_google' })
-
-const checkPinCreated = async (userId: string) => {
-  try {
-    const hasPin = await AsyncStorage.getItem(`userPin_${userId}`);
-    return hasPin !== null;
-  } catch (error) {
-    console.error('Error checking PIN:', error);
-    return false;
-  }
-};
-
-const google = React.useCallback(async () => {
-  try {
-    const { createdSessionId, signIn, signUp, setActive } = await startOAuthFlow({
-      redirectUrl: Linking.createURL('/dashboard', { scheme: 'myapp' }),
-    });
-    console.log('user created');
-
-    if (createdSessionId) {
-      setActive!({ session: createdSessionId });
-      
-      // Check if user has created PIN
-      const hasPinCreated = await checkPinCreated(createdSessionId);
-      
-      if (hasPinCreated) {
-        router.push('./(authenticated)/(tabs)/home');
-      } else {
-        router.push('/phoneNo');
+  // Check for existing user session and PIN on mount
+  useEffect(() => {
+    const checkExistingSession = async () => {
+      try {
+        if (user?.id) {
+          const hasPin = await AsyncStorage.getItem(`userPin_${user.id}`);
+          if (hasPin) {
+            router.replace('./pin-verification');
+          }
+        }
+      } catch (error) {
+        console.error('Error checking session:', error);
       }
-    }
-  } catch (err) {
-    console.error(JSON.stringify(err, null, 2));
-  }
-}, [])
+    };
 
+    checkExistingSession();
+  }, [user]);
+
+  const checkPinCreated = async (userId: string) => {
+    try {
+      const hasPin = await AsyncStorage.getItem(`userPin_${userId}`);
+      return hasPin !== null;
+    } catch (error) {
+      console.error('Error checking PIN:', error);
+      return false;
+    }
+  };
+
+  const google = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      const { createdSessionId, signIn, signUp, setActive } = await startOAuthFlow({
+        redirectUrl: Linking.createURL('/dashboard', { scheme: 'myapp' }),
+      });
+
+      if (createdSessionId && setActive) {
+        await setActive({ session: createdSessionId });
+        
+        // Store the user ID for PIN verification
+        await AsyncStorage.setItem('lastSignedInUser', createdSessionId);
+        
+        // Check if user has created PIN
+        const hasPinCreated = await checkPinCreated(createdSessionId);
+        
+        if (hasPinCreated) {
+          // User has PIN, go to verification
+          router.replace('./pin-verification');
+        } else {
+          // User needs to set up PIN, go to phone number entry first
+          router.replace('/phoneNo');
+        }
+      }
+    } catch (err) {
+      console.error(JSON.stringify(err, null, 2));
+      Alert.alert('Error', 'Failed to sign in. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Rest of your component remains the same
   return (
     <View style={styles.container}>
-      {/* Logo Circle */}
       <View style={styles.logoContainer}>
-      <Image source={require('../../assets/images/ICON.png')} style = {styles.logoContainer}/>
+        <Image source={require('../../assets/images/ICON.png')} style={styles.logoContainer}/>
       </View>
 
-      {/* Title Text */}
       <Text style={styles.titleText}>LOW </Text>
       <Text style={styles.titleText}>TRANSACTION RATES</Text>
       <Text style={styles.titleText}>FOR ALL</Text>
 
-      {/* Google Sign In Button */}
       <TouchableOpacity
         style={styles.googleButton}
         onPress={google}
@@ -89,15 +107,13 @@ const google = React.useCallback(async () => {
         <Text style={styles.googleButtonText}>Continue with Google</Text>
       </TouchableOpacity>
 
-      {/* Other Options Button */}
       <TouchableOpacity style={styles.otherOptionsButton}>
         <Text style={styles.otherOptionsText}>Other options</Text>
       </TouchableOpacity>
 
-      {/* Privacy Policy and Terms */}
       <View style={styles.policyContainer}>
         <Text style={styles.policyText}>Read our </Text>
-        <Link href="./privacy" style={styles.linkText} >
+        <Link href="./privacy" style={styles.linkText}>
           Privacy Policy
         </Link>
         <Text style={styles.policyText}> & </Text>
