@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   nextButton: {
-    backgroundColor: '#223F57',
+    backgroundColor: '#007AFF',
     padding: 15,
     borderRadius: 25,
     alignItems: 'center',
@@ -499,7 +499,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   sendButton: {
-    backgroundColor: '#223F57',
+    backgroundColor: '#007AFF',
     padding: 15,
     borderRadius: 25,
     flexDirection: 'row',

@@ -9,7 +9,7 @@ export default function AuthenticatedLayout() {
   }
 
   return (
-    <Stack >
+    <Stack  screenOptions={{headerShown:false}}>
       <Stack.Screen name="home" options={{
       statusBarBackgroundColor: 'black',
       title: '',

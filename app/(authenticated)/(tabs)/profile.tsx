@@ -44,7 +44,7 @@ const ProfileScreen = () => {
         </View>
 
         <View style={styles.menuContainer}>
-          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('./(tabs)/invite-people')}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(authenticated)/(tabs)/invitePeople')}>
             <Ionicons name="mail-outline" size={24} color="white" />
             <Text style={styles.menuText}>Invite friends</Text>
           </TouchableOpacity>
