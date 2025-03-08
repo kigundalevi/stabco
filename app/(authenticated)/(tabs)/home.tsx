@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, Platform, StatusBar, Animated, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, Platform, StatusBar, Animated, ActivityIndicator, RefreshControl, Easing } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth, useUser } from '@clerk/clerk-expo';
 import React, { useState, useEffect, useRef } from 'react';
@@ -46,15 +46,16 @@ export default function WalletScreen() {
     setModalVisible(true);
     Animated.timing(slideAnim, {
       toValue: 1,
-      duration: 300,
+      duration: 500,
       useNativeDriver: true,
+      easing: Easing.ease
     }).start();
   };
 
   const hideModal = () => {
     Animated.timing(slideAnim, {
       toValue: 0,
-      duration: 300,
+      duration: 400,
       useNativeDriver: true,
     }).start(() => {
       setModalVisible(false);
@@ -502,7 +503,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   payButton: {
-    backgroundColor: '#223F57',
+    backgroundColor: '#007AFF',
     padding: 16,
     borderRadius: 25,
     alignItems: 'center',

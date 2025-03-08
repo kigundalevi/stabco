@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, TextInput, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useUser } from '@clerk/clerk-expo';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 
 interface AddMoneyProps {
@@ -11,32 +11,40 @@ interface AddMoneyProps {
 }
 
 const AddMoney: React.FC<AddMoneyProps> = ({ onClose, onSuccess }) => {
-  const [amount, setAmount] = useState('');
-  const [error, setError] = useState('');
+  const [amount, setAmount] = useState('0.00');
   const [loading, setLoading] = useState(false);
   const { user } = useUser();
   
   const API_URL = 'https://hidden-eyrie-76070-9c205d882c7e.herokuapp.com';
 
+  const handleNumberPress = (num: string) => {
+    setAmount(prevAmount => {
+      const currentAmount = prevAmount.replace('.00', '').replace(/^0+/, '');
+      const newAmount = currentAmount + num;
+      return `${newAmount}.00`;
+    });
+  };
+
+  const handleBackspace = () => {
+    setAmount(prevAmount => {
+      const currentAmount = prevAmount.replace('.00', '').replace(/^0+/, '');
+      const newAmount = currentAmount.slice(0, -1) || '0';
+      return `${newAmount}.00`;
+    });
+  };
+
   const handleAddMoney = async () => {
     const numAmount = parseFloat(amount);
-    if (isNaN(numAmount) || numAmount <= 0) {
-      setError('Please enter a valid amount');
-      return;
-    }
+    if (isNaN(numAmount) || numAmount <= 0) return;
 
     try {
       setLoading(true);
-      setError('');
-
-      // Retrieve the stored phone number
       const phoneNumber = await AsyncStorage.getItem(`userPhone_${user?.id}`);
       
       if (!phoneNumber) {
-        throw new Error('Phone number not found. Please try again.');
+        throw new Error('Phone number not found');
       }
 
-      // Make API call to initiate STK push
       const response = await axios.post(`${API_URL}/api/v1/mpesa/stk-push`, {
         phoneNumber,
         amountKES: numAmount
@@ -44,138 +52,191 @@ const AddMoney: React.FC<AddMoneyProps> = ({ onClose, onSuccess }) => {
 
       if (response.data.success) {
         onSuccess(numAmount);
-        Alert.alert(
-          'Success',
-          'Please check your phone for the MPesa prompt',
-          [{ text: 'OK', onPress: onClose }]
-        );
-      } else {
-        throw new Error('Failed to initiate payment');
+        onClose();
       }
     } catch (error: any) {
-      const errorMessage = 
-        error.response?.data?.error || 
-        error.message || 
-        'Failed to process payment. Please try again.';
-      
-      setError(errorMessage);
-      Alert.alert('Error', errorMessage);
+      console.error(error);
     } finally {
       setLoading(false);
     }
   };
 
   return (
+     <View style={styles.modalContainer}>
+
     <View style={styles.container}>
-      <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-        <Ionicons name="close" size={24} color="#FFFFFF" />
-      </TouchableOpacity>
-      
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Add Money</Text>
+        <TouchableOpacity onPress={onClose}>
+          <Text style={styles.closeIcon}>✕</Text>
+        </TouchableOpacity>
+        <Text style={styles.title}>Add money</Text>
       </View>
 
-      <View style={styles.content}>
-        <View style={styles.inputContainer}>
-          <Text style={styles.currencySymbol}>KES</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="0.00"
-            placeholderTextColor="#CCCCCC"
-            keyboardType="decimal-pad"
-            value={amount}
-            onChangeText={setAmount}
-            editable={!loading}
-          />
+      <View style={styles.amountWrapper}>
+        <Text style={styles.amount}>KES {amount}</Text>
+        <View style={styles.currencyPill}>
+          <Text style={styles.currencyText}>KES</Text>
+        </View>
+      </View>
+
+      <View style={styles.keypadContainer}>
+        <View style={styles.row}>
+          <TouchableOpacity onPress={() => handleNumberPress('1')} style={styles.keyButton}>
+            <Text style={styles.keyText}>1</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => handleNumberPress('2')} style={styles.keyButton}>
+            <Text style={styles.keyText}>2</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => handleNumberPress('3')} style={styles.keyButton}>
+            <Text style={styles.keyText}>3</Text>
+          </TouchableOpacity>
         </View>
 
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        <View style={styles.row}>
+          <TouchableOpacity onPress={() => handleNumberPress('4')} style={styles.keyButton}>
+            <Text style={styles.keyText}>4</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => handleNumberPress('5')} style={styles.keyButton}>
+            <Text style={styles.keyText}>5</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => handleNumberPress('6')} style={styles.keyButton}>
+            <Text style={styles.keyText}>6</Text>
+          </TouchableOpacity>
+        </View>
 
-        <TouchableOpacity
-          style={[
-            styles.addButton,
-            {
-              backgroundColor: amount ? '#7C4DFF' : '#333333',
-              opacity: loading ? 0.5 : 1,
-            },
-          ]}
-          onPress={handleAddMoney}
-          disabled={!amount || loading}
-        >
-          {loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator color="#FFFFFF" />
-              <Text style={styles.addButtonText}>Processing...</Text>
-            </View>
-          ) : (
-            <Text style={styles.addButtonText}>Add</Text>
-          )}
-        </TouchableOpacity>
+        <View style={styles.row}>
+          <TouchableOpacity onPress={() => handleNumberPress('7')} style={styles.keyButton}>
+            <Text style={styles.keyText}>7</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => handleNumberPress('8')} style={styles.keyButton}>
+            <Text style={styles.keyText}>8</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => handleNumberPress('9')} style={styles.keyButton}>
+            <Text style={styles.keyText}>9</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.row}>
+          <TouchableOpacity style={styles.keyButton}>
+            <Text style={styles.keyText}>.</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => handleNumberPress('0')} style={styles.keyButton}>
+            <Text style={styles.keyText}>0</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleBackspace} style={styles.keyButton}>
+            <Text style={styles.keyText}>←</Text>
+          </TouchableOpacity>
+        </View>
       </View>
+
+      <TouchableOpacity 
+        style={[styles.nextButton, { opacity: loading ? 0.5 : 1 }]}
+        onPress={handleAddMoney}
+        disabled={loading || amount === '0.00'}
+      >{loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator color="#FFFFFF" />
+          <Text style={styles.nextButtonText}>Processing...</Text>
+        </View>
+      ) : (
+        <Text style={styles.nextButtonText}>Add</Text>
+      )}
+        
+      </TouchableOpacity>
     </View>
+     </View>
+   
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: '#1E1E1E',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingTop: 20,
-    paddingHorizontal: 16,
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#000000',
+   borderTopRightRadius:25,
+   borderTopLeftRadius:25,
+    overflow: 'hidden',
+   },
+   container: {
+    flex: 1,
+    backgroundColor: '#151414',
+    padding: 20,
+    borderTopRightRadius:20,
+    borderTopLeftRadius:20
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
-    justifyContent: 'center',
+    marginBottom: 40,
+    paddingTop: 20,
+
   },
-  closeButton: {
-    position: 'absolute',
-    top: 20,
-    left: 16,
-  },
-  headerTitle: {
+  closeIcon: {
     color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 24,
+    marginRight: 16,
   },
-  content: {
-    gap: 24,
+  title: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '500',
   },
-  inputContainer: {
+  amountWrapper: {
+    alignItems: 'center',
+    marginBottom: 60,
+    flexDirection:'row',
+    justifyContent:'center',
+    gap:10
+  },
+  amount: {
+    color: '#FFFFFF',
+    fontSize: 48,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  currencyPill: {
+    backgroundColor: '#333333',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    marginBottom:10
+  },
+  currencyText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+  },
+  keypadContainer: {
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  row: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 30,
+  },
+  keyButton: {
+    width: '33%',
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 40,
   },
-  currencySymbol: {
+  keyText: {
     color: '#FFFFFF',
-    fontSize: 40,
-    marginRight: 10,
-    fontWeight: '700',
+    fontSize: 32,
+    fontWeight: '400',
   },
-  input: {
-    flex: 1,
-    color: '#FFFFFF',
-    fontSize: 40,
-    fontWeight: '600',
-  },
-  errorText: {
-    color: '#FF3D00',
-    textAlign: 'center',
-  },
-  addButton: {
-    backgroundColor: '#7C4DFF',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 25,
-    alignItems: 'center',
-  },
-  addButtonText: {
+  nextButton: {
+    backgroundColor: '#007AFF',
+    padding: 16,
+    borderRadius: 30,
+    marginTop: 'auto',
+     },
+  nextButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+    textAlign: 'center',
   },
   loadingContainer: {
     flexDirection: 'row',
