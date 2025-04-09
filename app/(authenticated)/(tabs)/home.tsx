@@ -63,49 +63,49 @@ export default function WalletScreen() {
     });
   };
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      
-      const [transactionsRes, balanceRes] = await Promise.all([
-        axios.get(`${API_URL}/api/transactions/${user?.fullName}`),
-        axios.get(`${API_URL}/api/usdc-balance/${user?.fullName}`)
-      ]);
+ // Update the existing fetchData method
+const fetchData = async () => {
+  try {
+    setLoading(true);
+    setError('');
+    
+    const [transactionsRes, balanceRes] = await Promise.all([
+      axios.get(`${API_URL}/api/transactions/${user?.fullName}`),
+      axios.get(`${API_URL}/api/ksht-balance/${user?.fullName}`) // Updated route
+    ]);
 
-      const transactions = transactionsRes.data.transactions;
-      const usdcBalance = balanceRes.data.balance;
+    const transactions = transactionsRes.data.transactions;
+    const kshtBalance = balanceRes.data.balance;
 
-      // Format transactions
-      const formattedTransactions = transactions.map((tx: any) => ({
-        id: tx._id,
-        date: tx.date,
-        name: tx.counterparty || 'System',
-        amount: tx.amount,
-        type: tx.type === 'send' ? 'sent' : 'received',
-        status: tx.status,
-        currency: tx.currency
-      }));
+    // Format transactions
+    const formattedTransactions = transactions.map((tx: any) => ({
+      id: tx._id,
+      date: tx.date,
+      name: tx.counterparty || 'System',
+      amount: tx.amount,
+      type: tx.type === 'send' ? 'sent' : 'received',
+      status: tx.status,
+      currency: tx.currency || 'KSHT'
+    }));
 
-      // Group transactions
-      const grouped = groupTransactions(formattedTransactions);
-      setGroupedTransactions(grouped);
+    // Group transactions
+    const grouped = groupTransactions(formattedTransactions);
+    setGroupedTransactions(grouped);
 
-      // Update balances with hardcoded rate
-      setBalances(prev => ({
-        ...prev,
-        kes: usdcBalance * prev.rate,
-        usdc: usdcBalance
-      }));
+    // Update balances 
+    setBalances(prev => ({
+      ...prev,
+      kes: kshtBalance, // Direct KSHT balance in KES
+      usdc: kshtBalance // Use KSHT as the primary balance
+    }));
 
-    } catch (err) {
-      setError('Failed to load data. Please pull to refresh.');
-      console.error('Fetch error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  } catch (err) {
+    setError('Failed to load data. Please pull to refresh.');
+    console.error('Fetch error:', err);
+  } finally {
+    setLoading(false);
+  }
+};
   const groupTransactions = (transactions: any[]) => {
     const formatDate = (dateString: string) => {
       const date = new Date(dateString);
@@ -189,7 +189,7 @@ export default function WalletScreen() {
               KES {balances.kes.toLocaleString('en-KE', { maximumFractionDigits: 2 })}
             </Text>
             <Text style={styles.subBalance}>
-              {balances.usdc.toFixed(2)} USDC
+              {balances.usdc.toFixed(2)} KESS
             </Text>
           </View>
         </View>
@@ -273,7 +273,7 @@ export default function WalletScreen() {
                     { color: transaction.type === 'sent' ? '#FF3D00' : '#00C853' }
                   ]}>
                     {/* {transaction.type === 'sent' ? '-' : '+'} */}
-                    {transaction.currency === 'KES' ? 'KES' : '$'}
+                    {transaction.currency === 'KESS' ? 'KES' : '$'}
                     {transaction.amount.toLocaleString('en-KE')}
                   </Text>
                 </TouchableOpacity>

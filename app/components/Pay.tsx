@@ -61,7 +61,7 @@ const Pay: React.FC<PayProps> = ({ onClose, balance, onSuccess }) => {
   const [step, setStep] = useState<PaymentStep>('select');
   const [pin, setPin] = useState('');
   const { user } = useUser();
-  const API_URL = 'https://hidden-eyrie-76070-9c205d882c7e.herokuapp.com';   // Replace with your API URL
+  const API_URL = 'https://hidden-eyrie-76070-9c205d882c7e.herokuapp.com';   //
   const [searchQuery, setSearchQuery] = useState('');
   const [friendResults, setFriendResults] = useState<Friend[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -98,49 +98,38 @@ const Pay: React.FC<PayProps> = ({ onClose, balance, onSuccess }) => {
 
   const handlePinSubmit = async (submittedPin: string) => {
     setIsLoading(true);
-
+  
     if (!/^\d{4}$/.test(submittedPin)) {
       setIsLoading(false);
       Alert.alert('Invalid PIN', 'Your PIN must be exactly 4 digits.');
       return;
     }
-   
-    // Convert KES to USDC using the exchange rate
-    const exchangeRate = 129; // from home.tsx
-    const usdcAmount = parseFloat(amount) / exchangeRate;
      
-    const storedPin = await SecureStore.getItemAsync('userPIN');
-
-    if (submittedPin !== storedPin) {
-      setIsLoading(false);
-      Alert.alert('Invalid PIN', 'The PIN you entered is incorrect');
-      return;
-    }
-     const payload = {
+    const payload = {
       senderName: user?.fullName,
       pin: submittedPin,
       recipientName: selectedFriend,
-      amount: usdcAmount.toFixed(6)
+     amount: Math.floor(parseFloat(amount) * 100)// Ensure 2 decimal places for KSHT
     };
-     try {
   
-      // Call your send-usdc endpoint with USDC amount
-      const response = await axios.post(`${API_URL}/api/send-usdc`, payload, {
+    try {
+      // Updated to send-ksht endpoint
+      const response = await axios.post(`${API_URL}/api/send-ksht`, payload, {
         headers: { 'Content-Type': 'application/json' },
       });
   
       if (response.data.success) {
-        onSuccess(usdcAmount); // Call parent handler with amount
+        onSuccess(parseFloat(amount)); 
         setStep('success');
         setTimeout(() => {
           onClose();
         }, 2000);
       } else {
-        Alert.alert('Error', 'Transaction failed. Please try again.');
+        Alert.alert('Error', response.data.error || 'Transaction failed. Please try again.');
         setPin('');
       }
     } catch (error) {
-      // More detailed error logging
+      // Error handling remains similar
       if (axios.isAxiosError(error)) {
         console.error('Axios Error:', {
           response: error.response?.data,
@@ -148,7 +137,6 @@ const Pay: React.FC<PayProps> = ({ onClose, balance, onSuccess }) => {
           headers: error.response?.headers
         });
   
-        // More informative error message
         Alert.alert(
           'Transaction Error', 
           error.response?.data?.message || 
@@ -163,7 +151,6 @@ const Pay: React.FC<PayProps> = ({ onClose, balance, onSuccess }) => {
       setIsLoading(false);
     }
   };
-
   const renderFriendSelection = () => (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -336,7 +323,7 @@ const Pay: React.FC<PayProps> = ({ onClose, balance, onSuccess }) => {
       </View>
       <Text style={styles.successTitle}>Payment Sent!</Text>
       <Text style={styles.successText}>
-      KES {amount} (${(parseFloat(amount) / 129).toFixed(2)} USDC) sent to {selectedFriend}
+        KSHT {amount} sent to {selectedFriend}
       </Text>
     </View>
   );
