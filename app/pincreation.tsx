@@ -3,9 +3,9 @@ import { View, Text, Alert, StyleSheet, TextInput, Keyboard, TouchableWithoutFee
 import { useUser } from '@clerk/clerk-expo';
 import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
-import * as SecureStore from 'expo-secure-store';
-import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
 
 // Custom PIN Input component
 const PinInput = ({ value, onChange, maxLength = 4 }: { value: string; onChange: (text: string) => void; maxLength?: number }) => {
@@ -68,6 +68,7 @@ const pincreation = () => {
   const [step, setStep] = useState(1); // Step 1: Create PIN, Step 2: Confirm PIN
   const { user } = useUser();
   const navigation = useNavigation();
+  const router = useRouter();
   const API_URL = 'https://hidden-eyrie-76070-9c205d882c7e.herokuapp.com';  
 
   const handlePinChange = (value: string): void => {
@@ -91,10 +92,15 @@ const pincreation = () => {
   };
 
   const validateAndCreateWallet = async (confirmedPin: string) => {
+    // Add debugging to see the actual values
+    console.log('Original PIN:', pin);
+    console.log('Confirmed PIN:', confirmedPin);
+    
     if (pin !== confirmedPin) {
+      // Show the actual PIN values in the alert to debug
       Alert.alert(
         'PIN Mismatch',
-        'The PINs do not match. Please try again.',
+        `The PINs do not match. First PIN: ${pin}, Second PIN: ${confirmedPin}`,
         [{ text: 'OK', onPress: () => resetPinCreation() }]
       );
       return;
@@ -232,7 +238,3 @@ const styles = StyleSheet.create({
 });
 
 export default pincreation;
-
-function setIsLoading(arg0: boolean) {
-  throw new Error('Function not implemented.');
-}

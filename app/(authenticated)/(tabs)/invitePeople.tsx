@@ -2,12 +2,13 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import React from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const InvitePeople = () => {
   const router = useRouter();
   
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* Header with back button */}
       <TouchableOpacity 
         style={styles.backButton}
@@ -38,7 +39,7 @@ const InvitePeople = () => {
           <Text style={styles.inviteButtonText}>Invite Friends</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 

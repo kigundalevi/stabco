@@ -11,6 +11,7 @@ import {
 import { useRouter } from 'expo-router';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Define types
 interface Currency {
@@ -121,7 +122,7 @@ const ExchangeRates = () => {
   }, []);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['right', 'left', 'top']}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity 
@@ -182,7 +183,7 @@ const ExchangeRates = () => {
           <Text style={styles.errorText}>{error}</Text>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 

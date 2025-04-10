@@ -17,6 +17,7 @@ import { useUser } from '@clerk/clerk-expo';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const PhoneInput = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -125,81 +126,83 @@ const PhoneInput = () => {
   const isButtonDisabled = !validatePhoneNumber(phoneNumber) || isLoading;
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
+    <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
-      <Animated.View 
-        style={[
-          styles.contentContainer,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }]
-          }
-        ]}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
       >
-        <View style={styles.headerContainer}>
-          <Text style={styles.title}>Enter Your Number</Text>
-          <Text style={styles.subtitle}>
-            We'll use this to secure your wallet and verify transactions
-          </Text>
-        </View>
-
-        <View style={styles.inputContainer}>
-          <View 
-            style={[
-              styles.inputWrapper,
-              isInputFocused && styles.inputWrapperFocused
-            ]}
-          >
-            <Text style={styles.prefix}>🇰🇪 +254</Text>
-            <TextInput
-              ref={inputRef}
-              style={styles.input}
-              value={displayNumber}
-              onChangeText={handlePhoneNumberChange}
-              placeholder="7XXXXXXXX"
-              keyboardType="phone-pad"
-              maxLength={9}
-              onFocus={() => setIsInputFocused(true)}
-              onBlur={() => setIsInputFocused(false)}
-              placeholderTextColor="#A0A0A0"
-            />
-          </View>
-          
-          <Text style={styles.helperText}>
-            Enter your Kenyan mobile number starting with 7
-          </Text>
-        </View>
-
-        <TouchableOpacity 
+        <Animated.View 
           style={[
-            styles.button,
-            isButtonDisabled && styles.buttonDisabled
+            styles.contentContainer,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }
           ]}
-          onPress={handleContinue}
-          disabled={isButtonDisabled}
         >
-          {isLoading ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.buttonText}>Continue</Text>
-          )}
-        </TouchableOpacity>
+          <View style={styles.headerContainer}>
+            <Text style={styles.title}>Enter Your Number</Text>
+            <Text style={styles.subtitle}>
+              We'll use this to secure your wallet and verify transactions
+            </Text>
+          </View>
 
-        <Text style={styles.privacyText}>
-          By continuing, you agree to receive SMS messages for verification
-        </Text>
-      </Animated.View>
-    </KeyboardAvoidingView>
+          <View style={styles.inputContainer}>
+            <View 
+              style={[
+                styles.inputWrapper,
+                isInputFocused && styles.inputWrapperFocused
+              ]}
+            >
+              <Text style={styles.prefix}>🇰🇪 +254</Text>
+              <TextInput
+                ref={inputRef}
+                style={styles.input}
+                value={displayNumber}
+                onChangeText={handlePhoneNumberChange}
+                placeholder="7XXXXXXXX"
+                keyboardType="phone-pad"
+                maxLength={9}
+                onFocus={() => setIsInputFocused(true)}
+                onBlur={() => setIsInputFocused(false)}
+                placeholderTextColor="#A0A0A0"
+              />
+            </View>
+            
+            <Text style={styles.helperText}>
+              Enter your Kenyan mobile number starting with 7
+            </Text>
+          </View>
+
+          <TouchableOpacity 
+            style={[
+              styles.button,
+              isButtonDisabled && styles.buttonDisabled
+            ]}
+            onPress={handleContinue}
+            disabled={isButtonDisabled}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.buttonText}>Continue</Text>
+            )}
+          </TouchableOpacity>
+
+          <Text style={styles.privacyText}>
+            By continuing, you agree to receive SMS messages for verification
+          </Text>
+        </Animated.View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#000',
   },
   contentContainer: {
     flex: 1,
@@ -212,13 +215,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#000000',
+    color: '#FFFFFF',
     marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
-    color: '#666666',
+    color: '#FFFFFF',
     textAlign: 'center',
     lineHeight: 22,
     paddingHorizontal: 20,
@@ -254,7 +257,7 @@ const styles = StyleSheet.create({
   },
   helperText: {
     fontSize: 14,
-    color: '#666666',
+    color: '#FFFFFF',
     marginTop: 8,
     marginLeft: 16,
   },
@@ -284,7 +287,7 @@ const styles = StyleSheet.create({
   },
   privacyText: {
     fontSize: 14,
-    color: '#666666',
+    color: '#FFFFFF',
     textAlign: 'center',
     marginTop: 24,
     paddingHorizontal: 40,

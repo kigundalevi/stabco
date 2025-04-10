@@ -2,6 +2,9 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import { useClerk, useUser } from '@clerk/clerk-expo';
 import * as Linking from 'expo-linking';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
+import { MaterialIcons } from '@expo/vector-icons';
 
 const PersonalDetails = () => {
   const { user } = useUser();
@@ -35,7 +38,10 @@ const PersonalDetails = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+         <TouchableOpacity style={styles.backButton} onPress={() => router.push('/home')}>
+          <MaterialIcons name="arrow-back" size={24} color="white" />
+        </TouchableOpacity>
       <Text style={styles.title}>Your details</Text>
       
       <View style={styles.fieldContainer}>
@@ -66,7 +72,7 @@ const PersonalDetails = () => {
         <Text style={styles.label}>Email address</Text>
         <Text style={styles.value}>{personalInfo.emailAddress}</Text>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -75,6 +81,9 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: '#000000',
     flex: 1,
+  },
+  backButton: {
+    padding: 16
   },
   title: {
     fontSize: 24,

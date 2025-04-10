@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { router } from 'expo-router';
 import Onboarding from 'react-native-onboarding-swiper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width, height } = Dimensions.get('window');
 
@@ -54,9 +55,9 @@ const Index = () => {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
+      <SafeAreaView style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#7C4DFF" />
-      </View>
+      </SafeAreaView>
     );
   }
 
@@ -65,7 +66,7 @@ const Index = () => {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <Onboarding
         containerStyles={{ paddingHorizontal: 15 }}
         bottomBarHighlight={false}
@@ -113,7 +114,7 @@ const Index = () => {
           },
         ]}
       />
-    </View>
+    </SafeAreaView>
   );
 };
 

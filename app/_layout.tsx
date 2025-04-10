@@ -6,6 +6,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
 import { FontAwesome } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { tokenCache } from '@/cache';
 
 SplashScreen.preventAutoHideAsync();
@@ -103,9 +104,9 @@ useEffect(() => {
 
   if (!isLoaded) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color="blue" />
-      </View>
+      </SafeAreaView>
     );
   }
 
@@ -131,11 +132,13 @@ const RootLayout = () => {
   if (!fontsLoaded) return null;
 
   return (
-    <ClerkProvider publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!} tokenCache={tokenCache}>
-      <ClerkLoaded>
-        <InitialLayout />
-      </ClerkLoaded>
-    </ClerkProvider>
+    <SafeAreaProvider>
+      <ClerkProvider publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!} tokenCache={tokenCache}>
+        <ClerkLoaded>
+          <InitialLayout />
+        </ClerkLoaded>
+      </ClerkProvider>
+    </SafeAreaProvider>
   );
 };
 

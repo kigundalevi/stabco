@@ -13,6 +13,7 @@ import { useUser } from '@clerk/clerk-expo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 const BUTTON_SIZE = width * 0.2;
@@ -161,9 +162,8 @@ const PinVerification = () => {
   );
 
   return (
-    <View style={styles.container}>
-      <StatusBar backgroundColor="black" barStyle="light-content" />
-      
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" />
       <View style={styles.header}>
         <Ionicons name="lock-closed" size={50} color="#007AFF" />
         <Text style={styles.title}>Enter your PIN</Text>
@@ -239,7 +239,7 @@ const PinVerification = () => {
           Forgot PIN?
         </Text>
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 };
 

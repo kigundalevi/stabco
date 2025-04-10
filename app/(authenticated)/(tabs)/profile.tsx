@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useAuth, useUser } from '@clerk/clerk-expo';
 import { MaterialIcons, Ionicons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const ProfileScreen = () => {
   const router = useRouter();
@@ -27,7 +28,7 @@ const ProfileScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['right', 'left', 'top']}>
       <ScrollView>
         <TouchableOpacity style={styles.backButton} onPress={() => router.push('/home')}>
           <MaterialIcons name="arrow-back" size={24} color="white" />
@@ -60,7 +61,7 @@ const ProfileScreen = () => {
             <Text style={styles.menuText}>Personal details</Text>
           </TouchableOpacity>
 
-                   <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/paymentMethod')}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/paymentMethod')}>
             <MaterialCommunityIcons name="credit-card-outline" size={24} color="white" />
             <Text style={styles.menuText}>Payment Method</Text>
           </TouchableOpacity>
@@ -96,7 +97,7 @@ const ProfileScreen = () => {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 

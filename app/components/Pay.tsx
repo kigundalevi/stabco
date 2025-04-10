@@ -1,20 +1,34 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, TextInput, Image, Alert, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { 
+  View, 
+  Text, 
+  TouchableOpacity, 
+  StyleSheet, 
+  TextInput, 
+  Image, 
+  Alert, 
+  ActivityIndicator, 
+  KeyboardAvoidingView, 
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard
+} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useUser } from '@clerk/clerk-expo';
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
-
 
 interface PinInputProps {
   value: string;
   onChange: (value: string) => void;
   maxLength?: number;
 }
- interface Friend {
+
+interface Friend {
   name: string;
- }
+}
 
 const PinInput = ({ value, onChange, maxLength = 4 }: PinInputProps) => {
   return (
@@ -42,18 +56,12 @@ const PinInput = ({ value, onChange, maxLength = 4 }: PinInputProps) => {
 };
 
 type PayProps = {
+  onClose: () => void;
+  balance: number;
+  onSuccess: (amount: number) => void;
+};
 
-    onClose: () => void;
-  
-    balance: number;
-  
-    onSuccess: (amount: number) => void;
-
-     
-  };
-  
-
-  type PaymentStep = 'select' | 'amount' | 'confirm' | 'pin' | 'success';
+type PaymentStep = 'select' | 'amount' | 'confirm' | 'pin' | 'success';
 
 const Pay: React.FC<PayProps> = ({ onClose, balance, onSuccess }) => {
   const [amount, setAmount] = useState('');
@@ -61,7 +69,7 @@ const Pay: React.FC<PayProps> = ({ onClose, balance, onSuccess }) => {
   const [step, setStep] = useState<PaymentStep>('select');
   const [pin, setPin] = useState('');
   const { user } = useUser();
-  const API_URL = 'https://hidden-eyrie-76070-9c205d882c7e.herokuapp.com';   // Replace with your API URL
+  const API_URL = 'https://hidden-eyrie-76070-9c205d882c7e.herokuapp.com'; // Replace with your API URL
   const [searchQuery, setSearchQuery] = useState('');
   const [friendResults, setFriendResults] = useState<Friend[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -74,90 +82,149 @@ const Pay: React.FC<PayProps> = ({ onClose, balance, onSuccess }) => {
     }
 
     setIsSearching(true);
-    try {
-      const response = await axios.post(`${API_URL}/api/search`, { name: query });
-      
-      if (response.data.success) {
-        // Map to extract only names and filter out current user
-        const filteredResults = response.data.users
-          .filter((user: any) => user.name !== user?.fullName)
-          .map((user: any) => ({ name: user.name }));
 
-        setFriendResults(filteredResults);
-      } else {
-        Alert.alert('Search Error', 'Unable to search friends');
+    try {
+      const axiosInstance = axios.create({
+        timeout: 8000 // 8 seconds timeout
+      });
+
+      try {
+        const response = await axiosInstance.post(`${API_URL}/api/search`, { name: query });
+
+        if (response.data.success) {
+          const filteredResults = response.data.users
+            .filter((user: any) => user.name !== user?.fullName)
+            .map((user: any) => ({ name: user.name }));
+
+          setFriendResults(filteredResults);
+        } else {
+          Alert.alert('Search Error', 'Unable to search friends');
+        }
+      } catch (apiError) {
+        console.error('Friend search error:', apiError);
+
+        if (axios.isAxiosError(apiError)) {
+          if (apiError.code === 'ECONNABORTED') {
+            Alert.alert('Connection Error', 'Search request timed out. Please check your internet connection.');
+          } else if (!apiError.response) {
+            Alert.alert('Network Error', 'Could not connect to the server.');
+          } else {
+            Alert.alert('Server Error', 'Could not retrieve user list. Please try again later.');
+          }
+        } else {
+          Alert.alert('Error', 'An unexpected error occurred during search.');
+        }
+
+        setFriendResults([]);
       }
     } catch (error) {
       console.error('Friend search error:', error);
-      Alert.alert('Error', 'Failed to search friends');
+      setFriendResults([]);
     } finally {
       setIsSearching(false);
     }
   };
 
-
   const handlePinSubmit = async (submittedPin: string) => {
     setIsLoading(true);
+    console.log('PIN submitted for verification:', submittedPin);
 
     if (!/^\d{4}$/.test(submittedPin)) {
       setIsLoading(false);
       Alert.alert('Invalid PIN', 'Your PIN must be exactly 4 digits.');
       return;
     }
-   
-    // Convert KES to USDC using the exchange rate
+
     const exchangeRate = 129; // from home.tsx
     const usdcAmount = parseFloat(amount) / exchangeRate;
-     
-    const storedPin = await SecureStore.getItemAsync('userPIN');
 
-    if (submittedPin !== storedPin) {
-      setIsLoading(false);
-      Alert.alert('Invalid PIN', 'The PIN you entered is incorrect');
-      return;
-    }
-     const payload = {
-      senderName: user?.fullName,
-      pin: submittedPin,
-      recipientName: selectedFriend,
-      amount: usdcAmount.toFixed(6)
-    };
-     try {
-  
-      // Call your send-usdc endpoint with USDC amount
-      const response = await axios.post(`${API_URL}/api/send-usdc`, payload, {
-        headers: { 'Content-Type': 'application/json' },
+    try {
+      // First, try to get PIN from AsyncStorage (new method)
+      let isValid = false;
+      let storedPin = null;
+      
+      // Try to get PIN from AsyncStorage first (newer storage method)
+      if (user?.id) {
+        storedPin = await AsyncStorage.getItem(`userPin_${user.id}`);
+        console.log('PIN from AsyncStorage:', storedPin ? '****' : 'not found');
+        
+        if (storedPin && submittedPin === storedPin) {
+          isValid = true;
+        }
+      }
+      
+      // If not found or not matched in AsyncStorage, try SecureStore (older method)
+      if (!isValid) {
+        storedPin = await SecureStore.getItemAsync('userPIN');
+        console.log('PIN from SecureStore:', storedPin ? '****' : 'not found');
+        
+        if (storedPin && submittedPin === storedPin) {
+          isValid = true;
+        }
+      }
+
+      if (!isValid) {
+        setIsLoading(false);
+        Alert.alert('Invalid PIN', 'The PIN you entered is incorrect. Please try again.');
+        setPin('');
+        return;
+      }
+
+      const payload = {
+        senderName: user?.fullName,
+        pin: submittedPin,
+        recipientName: selectedFriend,
+        amount: usdcAmount.toFixed(6)
+      };
+
+      const axiosInstance = axios.create({
+        timeout: 15000 // 15 seconds timeout for transactions
       });
-  
-      if (response.data.success) {
-        onSuccess(usdcAmount); // Call parent handler with amount
-        setStep('success');
-        setTimeout(() => {
-          onClose();
-        }, 2000);
-      } else {
-        Alert.alert('Error', 'Transaction failed. Please try again.');
+
+      try {
+        console.log('Sending transaction payload:', {
+          ...payload,
+          pin: '****' // Mask PIN in logs
+        });
+        
+        const response = await axiosInstance.post(`${API_URL}/api/send-usdc`, payload, {
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (response.data.success) {
+          onSuccess(usdcAmount); // Call parent handler with amount
+          setStep('success');
+          setTimeout(() => {
+            onClose();
+          }, 2000);
+        } else {
+          Alert.alert('Error', response.data.message || 'Transaction failed. Please try again.');
+          setPin('');
+        }
+      } catch (apiError) {
+        console.error('Payment API error:', apiError);
+
+        if (axios.isAxiosError(apiError)) {
+          if (apiError.code === 'ECONNABORTED') {
+            Alert.alert('Transaction Error', 'Transaction request timed out. Your payment may still be processing.');
+          } else if (apiError.response) {
+            Alert.alert('Transaction Error', `Transaction failed: ${apiError.response.data.message || apiError.response.statusText || 'Server error'}`);
+            console.error('Response data:', apiError.response.data);
+          } else if (apiError.request) {
+            Alert.alert('Transaction Error', 'No response from server. Please verify the transaction status later.');
+          } else {
+            Alert.alert('Transaction Error', 'Error preparing transaction request. Please try again.');
+          }
+        } else {
+          Alert.alert('Transaction Error', 'An unexpected error occurred. Please try again.');
+        }
+
         setPin('');
       }
     } catch (error) {
-      // More detailed error logging
-      if (axios.isAxiosError(error)) {
-        console.error('Axios Error:', {
-          response: error.response?.data,
-          status: error.response?.status,
-          headers: error.response?.headers
-        });
-  
-        // More informative error message
-        Alert.alert(
-          'Transaction Error', 
-          error.response?.data?.message || 
-          'Failed to process transaction. Please check your details and try again.'
-        );
-      } else {
-        console.error('Unexpected Error:', error);
-        Alert.alert('Error', 'An unexpected error occurred. Please try again.');
-      }
+      console.error('PIN validation error:', error);
+      setIsLoading(false);
+      Alert.alert('Error', 'An error occurred while validating your PIN. Please try again.');
       setPin('');
     } finally {
       setIsLoading(false);
@@ -192,7 +259,7 @@ const Pay: React.FC<PayProps> = ({ onClose, balance, onSuccess }) => {
       <View style={styles.friendsList}>
         {friendResults.length > 0 ? (
           friendResults.map((friend: Friend) => (
-            <TouchableOpacity 
+            <TouchableOpacity
               key={friend.name}
               style={styles.friendItem}
               onPress={() => {
@@ -202,8 +269,7 @@ const Pay: React.FC<PayProps> = ({ onClose, balance, onSuccess }) => {
             >
               <View style={styles.friendAvatar}>
                 <Text style={styles.avatarText}>
-                  {friend.name.split(' ')[0]?.charAt(0).toUpperCase()+ friend.name.split(' ')[1]?.charAt(0).toUpperCase() }
-               
+                  {friend.name.split(' ')[0]?.charAt(0).toUpperCase() + friend.name.split(' ')[1]?.charAt(0).toUpperCase()}
                 </Text>
               </View>
               <Text style={styles.friendName}>{friend.name}</Text>
@@ -217,83 +283,121 @@ const Pay: React.FC<PayProps> = ({ onClose, balance, onSuccess }) => {
   );
 
   const renderAmountInput = () => (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => setStep('select')}>
-        <Icon name="arrow-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Text style={styles.title}>Enter Amount</Text>
-        <View style={{ width: 24 }} />
-      </View>
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={{ flex: 1 }}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => setStep('select')}>
+              <Icon name="arrow-back" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+            <Text style={styles.title}>Enter Amount</Text>
+            <View style={{ width: 24 }} />
+          </View>
 
-      <View style={styles.amountContainer}>
-        <Text style={styles.currencySymbol}>KES</Text>
-        <TextInput
-          style={styles.amountInput}
-          placeholder="0.00"
-          keyboardType="decimal-pad"
-          value={amount}
-          onChangeText={setAmount}
-          placeholderTextColor="#888"
-          autoFocus
-        />
-      </View>
+          <View style={styles.amountContainer}>
+            <Text style={styles.currencySymbol}>KES</Text>
+            <TextInput
+              style={styles.amountInput}
+              placeholder="0.00"
+              keyboardType="decimal-pad"
+              value={amount}
+              onChangeText={setAmount}
+              placeholderTextColor="#888"
+              autoFocus
+            />
+          </View>
 
-      <Text style={styles.balanceText}>Available balance: KES{balance}</Text>
+          <Text style={styles.balanceText}>Available balance: KES{balance}</Text>
 
-      <TouchableOpacity 
-        style={[
-          styles.nextButton,
-          { opacity: amount ? 1 : 0.5 }
-        ]}
-        onPress={() => setStep('confirm')}
-        disabled={!amount}
-      >
-        <Text style={styles.nextButtonText}>Continue</Text>
-      </TouchableOpacity>
-    </View>
-  );
-     
-  const renderPinVerification = () => (
-    <View style={styles.container}>
-      {isLoading && (
-        <View style={styles.loadingOverlay}>
-          <View style={styles.loaderContainer}>
-            <ActivityIndicator size="large" color="#FFFFFF" />
-            <Text style={styles.loaderText}>Processing...</Text>
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={[
+                styles.nextButton,
+                { opacity: amount ? 1 : 0.5 }
+              ]}
+              onPress={() => {
+                Keyboard.dismiss();
+                setStep('confirm');
+              }}
+              disabled={!amount}
+            >
+              <Text style={styles.nextButtonText}>Continue</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => {
+                Keyboard.dismiss();
+                setStep('select');
+              }}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
           </View>
         </View>
-      )}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => setStep('confirm')}>
-          <Icon name="arrow-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Text style={styles.title}>Enter PIN</Text>
-        <View style={{ width: 24 }} />
-      </View>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
+  );
 
-      <View style={styles.pinVerificationContainer}>
-        <Text style={styles.pinInstructions}>
-          Enter your 4-digit PIN to confirm the transaction
-        </Text>
-        
-        <PinInput
+  const renderPinVerification = () => (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={{ flex: 1 }}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.container}>
+          {isLoading && (
+            <View style={styles.loadingOverlay}>
+              <View style={styles.loaderContainer}>
+                <ActivityIndicator size="large" color="#FFFFFF" />
+                <Text style={styles.loaderText}>Processing...</Text>
+              </View>
+            </View>
+          )}
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => {
+              Keyboard.dismiss();
+              setStep('confirm');
+            }}>
+              <Icon name="arrow-back" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+            <Text style={styles.title}>Enter PIN</Text>
+            <View style={{ width: 24 }} />
+          </View>
+
+          <View style={styles.pinInstructionsContainer}>
+            <Text style={styles.pinInstructions}>
+              Enter your 4-digit PIN to confirm the transaction
+            </Text>
+
+            <PinInput
               value={pin}
               onChange={(value: string) => {
                 console.log('RAW INPUT:', value);
-                // Remove any non-numeric characters
                 const newPin = value.replace(/[^0-9]/g, '');
                 setPin(newPin);
-                // When exactly 4 digits are entered, immediately submit.
                 if (newPin.length === 4) {
-                handlePinSubmit(newPin);
+                  handlePinSubmit(newPin);
                 }
               }}
             />
-
-      
-      </View>
-    </View>
+          </View>
+          
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={() => {
+              Keyboard.dismiss();
+              setStep('confirm');
+            }}
+          >
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 
   const renderConfirmation = () => (
@@ -311,14 +415,14 @@ const Pay: React.FC<PayProps> = ({ onClose, balance, onSuccess }) => {
           <Text style={styles.confirmLabel}>Sending to</Text>
           <Text style={styles.confirmValue}>{selectedFriend}</Text>
         </View>
-        
+
         <View style={styles.confirmationDetail}>
           <Text style={styles.confirmLabel}>Amount</Text>
           <Text style={styles.confirmValue}>{amount}</Text>
         </View>
       </View>
 
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.sendButton}
         onPress={() => setStep('pin')} // Changed to go to PIN verification
       >
@@ -327,7 +431,6 @@ const Pay: React.FC<PayProps> = ({ onClose, balance, onSuccess }) => {
       </TouchableOpacity>
     </View>
   );
- 
 
   const renderSuccess = () => (
     <View style={styles.successContainer}>
@@ -336,7 +439,7 @@ const Pay: React.FC<PayProps> = ({ onClose, balance, onSuccess }) => {
       </View>
       <Text style={styles.successTitle}>Payment Sent!</Text>
       <Text style={styles.successText}>
-      KES {amount} (${(parseFloat(amount) / 129).toFixed(2)} USDC) sent to {selectedFriend}
+        KES {amount} (${(parseFloat(amount) / 129).toFixed(2)} USDC) sent to {selectedFriend}
       </Text>
     </View>
   );
@@ -349,8 +452,8 @@ const Pay: React.FC<PayProps> = ({ onClose, balance, onSuccess }) => {
         return renderAmountInput();
       case 'confirm':
         return renderConfirmation();
-        case 'pin':
-          return renderPinVerification();
+      case 'pin':
+        return renderPinVerification();
       case 'success':
         return renderSuccess();
       default:
@@ -370,11 +473,11 @@ const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
     backgroundColor: '#000000',
-   borderTopRightRadius:25,
-   borderTopLeftRadius:25,
+    borderTopRightRadius: 25,
+    borderTopLeftRadius: 25,
     overflow: 'hidden',
-   },
-   gradientOverlay: {
+  },
+  gradientOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
@@ -442,7 +545,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 40,
     marginRight: 10,
-    fontWeight:700,
+    fontWeight: 700,
   },
   amountInput: {
     color: '#FFFFFF',
@@ -450,7 +553,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     minWidth: 150,
     fontFamily: 'Poppins',
-    fontWeight:700,
+    fontWeight: 700,
   },
   balanceText: {
     color: '#888888',
@@ -600,7 +703,33 @@ const styles = StyleSheet.create({
   loaderText: {
     color: '#FFFFFF',
     marginTop: 10
-  }
+  },
+  buttonContainer: {
+    width: '100%',
+    marginTop: 20,
+    paddingHorizontal: 20,
+  },
+  cancelButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#666',
+    borderRadius: 30,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  cancelButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  pinInstructionsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
 });
 
 export default Pay;

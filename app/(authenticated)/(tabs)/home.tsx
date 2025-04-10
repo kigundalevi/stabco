@@ -1,14 +1,14 @@
-import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, Platform, StatusBar, Animated, ActivityIndicator, RefreshControl, Easing } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, Platform, StatusBar, Animated, ActivityIndicator, RefreshControl, Easing, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth, useUser } from '@clerk/clerk-expo';
 import React, { useState, useEffect, useRef } from 'react';
 import { Feather, Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Pay from '../../components/Pay';
 import Withdraw from '../../components/Withdraw';
 import AddMoney from '../../components/AddMoney';
 import axios from 'axios';
 import { BackHandler } from 'react-native';
-
 
 export default function WalletScreen() {
   const router = useRouter();
@@ -68,36 +68,72 @@ export default function WalletScreen() {
       setLoading(true);
       setError('');
       
-      const [transactionsRes, balanceRes] = await Promise.all([
-        axios.get(`${API_URL}/api/transactions/${user?.fullName}`),
-        axios.get(`${API_URL}/api/usdc-balance/${user?.fullName}`)
-      ]);
+      // Implement timeout for axios requests
+      const axiosInstance = axios.create({
+        timeout: 10000 // 10 seconds timeout
+      });
+      
+      try {
+        const [transactionsRes, balanceRes] = await Promise.all([
+          axiosInstance.get(`${API_URL}/api/transactions/${user?.fullName}`),
+          axiosInstance.get(`${API_URL}/api/ksht-balance/${user?.fullName}`)
+        ]);
 
-      const transactions = transactionsRes.data.transactions;
-      const usdcBalance = balanceRes.data.balance;
+        const transactions = transactionsRes.data.transactions;
+        const usdcBalance = balanceRes.data.balance;
 
-      // Format transactions
-      const formattedTransactions = transactions.map((tx: any) => ({
-        id: tx._id,
-        date: tx.date,
-        name: tx.counterparty || 'System',
-        amount: tx.amount,
-        type: tx.type === 'send' ? 'sent' : 'received',
-        status: tx.status,
-        currency: tx.currency
-      }));
+        // Format transactions
+        const formattedTransactions = transactions.map((tx: any) => ({
+          id: tx._id,
+          date: tx.date,
+          name: tx.counterparty || 'System',
+          amount: tx.amount,
+          type: tx.type === 'send' ? 'sent' : 'received',
+          status: tx.status,
+          currency: tx.currency
+        }));
 
-      // Group transactions
-      const grouped = groupTransactions(formattedTransactions);
-      setGroupedTransactions(grouped);
+        // Group transactions
+        const grouped = groupTransactions(formattedTransactions);
+        setGroupedTransactions(grouped);
 
-      // Update balances with hardcoded rate
-      setBalances(prev => ({
-        ...prev,
-        kes: usdcBalance * prev.rate,
-        usdc: usdcBalance
-      }));
-
+        // Update balances with hardcoded rate
+        setBalances(prev => ({
+          ...prev,
+          kes: usdcBalance * prev.rate,
+          usdc: usdcBalance
+        }));
+      } catch (apiError) {
+        console.error('API fetch error:', apiError);
+        
+        // Detailed error handling
+        if (axios.isAxiosError(apiError)) {
+          if (apiError.code === 'ECONNABORTED') {
+            setError('Connection timed out. Please check your internet connection.');
+          } else if (apiError.response) {
+            // The request was made and the server responded with a status code
+            // that falls out of the range of 2xx
+            setError(`Server error: ${apiError.response.status}. Please try again later.`);
+            console.error('Response data:', apiError.response.data);
+          } else if (apiError.request) {
+            // The request was made but no response was received
+            setError('No response from server. Please check your internet connection.');
+          } else {
+            // Something happened in setting up the request
+            setError('Error preparing request. Please restart the app.');
+          }
+        } else {
+          setError('Unknown error occurred. Please try again.');
+        }
+        
+        // Set default values for offline mode
+        setGroupedTransactions({});
+        setBalances(prev => ({
+          ...prev,
+          kes: 0,
+          usdc: 0
+        }));
+      }
     } catch (err) {
       setError('Failed to load data. Please pull to refresh.');
       console.error('Fetch error:', err);
@@ -166,7 +202,7 @@ export default function WalletScreen() {
   };
   
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['right', 'left', 'top']}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.profileSection}>
@@ -341,7 +377,7 @@ export default function WalletScreen() {
           )}
         </Animated.View>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
