@@ -225,7 +225,7 @@ export default function WalletScreen() {
               KES {balances.kes.toLocaleString('en-KE', { maximumFractionDigits: 2 })}
             </Text>
             <Text style={styles.subBalance}>
-              {balances.usdc.toFixed(2)} USDC
+              {balances.usdc.toFixed(2)} KESS
             </Text>
           </View>
         </View>
@@ -309,7 +309,7 @@ export default function WalletScreen() {
                     { color: transaction.type === 'sent' ? '#FF3D00' : '#00C853' }
                   ]}>
                     {/* {transaction.type === 'sent' ? '-' : '+'} */}
-                    {transaction.currency === 'KES' ? 'KES' : '$'}
+                    {transaction.currency === 'KESS' ? 'KES' : '$'}
                     {transaction.amount.toLocaleString('en-KE')}
                   </Text>
                 </TouchableOpacity>

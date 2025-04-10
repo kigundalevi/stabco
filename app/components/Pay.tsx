@@ -230,7 +230,6 @@ const Pay: React.FC<PayProps> = ({ onClose, balance, onSuccess }) => {
       setIsLoading(false);
     }
   };
-
   const renderFriendSelection = () => (
     <View style={styles.container}>
       <View style={styles.header}>
